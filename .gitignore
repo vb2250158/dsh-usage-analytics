@@ -1,0 +1,16 @@
+# npm / node
+node_modules/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Analytics local cache (never commit)
+usage-analytics/
+*.tmp
