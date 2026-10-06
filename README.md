@@ -2,7 +2,7 @@
 
 [中文文档](./README.zh.md) · [Apache-2.0](./LICENSE)
 
-Version 1.1.1 of this fork adds a dedicated Skill usage page to the DeepSeek Harness Web GUI. Open **Skill statistics** beside Settings to see invocation counts, the number of Skills and sessions, and a searchable ranking with model calls, explicit user loads, and the most recent use.
+Version 1.2.0 of this fork adds a Skill usage page to the DeepSeek Harness Web GUI. With a compatible `dsh-usage-plugin`, open **Settings → Usage statistics → Skill usage**. With this plugin alone, open **Skill statistics** beside Settings. Both show invocation counts, the number of Skills and sessions, and a searchable ranking with model calls, explicit user loads, and the most recent use.
 
 This fork is maintained at [vb2250158/dsh-usage-analytics](https://github.com/vb2250158/dsh-usage-analytics). It derives from [2327644800/dsh-usage-analytics](https://github.com/2327644800/dsh-usage-analytics), originally authored by lemon. The upstream license and attribution remain in place.
 
@@ -14,7 +14,7 @@ Install the fork from an immutable Git commit into the Web profile. Replace `<40
 dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-commit-sha>
 ```
 
-Ensure `dsh-usage-analytics` is selected in the profile's `dsh.profile.bundles` list; an already-installed but disabled bundle can be enabled in DSH's plugin manager. Restart that profile, then open **Skill statistics** in the sidebar. This fork uses the DSH 0.2 persistence and browser extension APIs; its target package generation is `0.2.1-alpha.1`. Desktop carriers require those same APIs and plugin resolution support; no broader compatibility is implied.
+Ensure `dsh-usage-analytics` is selected in the profile's `dsh.profile.bundles` list; an already-installed but disabled bundle can be enabled in DSH's plugin manager. Restart that profile, then open the shared statistics page or the standalone sidebar entry described above. This fork uses the DSH 0.2 persistence and browser extension APIs; its target package generation is `0.2.1-alpha.1`. Desktop carriers require those same APIs and plugin resolution support; no broader compatibility is implied.
 
 ## Use
 
@@ -23,6 +23,12 @@ The default period is **Total count** (`all`). **Last seven days** (`7`) and **L
 The ranking sorts by usage count, then Skill name. **Refresh** waits for a scan of the retained session logs. The page also refreshes automatically and displays scanning or stale-data status.
 
 If the retained logs contain no Skill tool attempts or confirmed user loads, the page shows zero counts and an empty ranking.
+
+## Shared statistics page
+
+`dsh-usage-plugin` 1.22.0 declares the root-scoped list slot `settings.usage-statistics.tab` in its **Usage statistics** settings section. This plugin contributes `skill-usage` at order 10, with its own localized label and dictionary. The parent supplies `active` and `close` as runtime props. The SlotMap declaration is owned by `dsh-usage-plugin/usage-statistics-slots`; this plugin does not duplicate that declaration or require the usage plugin to run.
+
+While the slot exists, the standalone sidebar action and overlay registrations are removed. Unloading the parent restores them; either plugin load order is supported. A visited shared tab retains its selected period, search and loaded rows when hidden, while its requests and browser polling stop. The Host observer and cache keep their existing lifecycle.
 
 ## What counts
 
@@ -68,7 +74,9 @@ npm test
 node scripts/verify-data.mjs --profile-dir <profile-directory> --sessions-root <session-log-directory>
 ```
 
-The verification script uses the supplied DSH profile to resolve the persistence implementation and prints metadata counts from the supplied session root. It does not launch a DSH application. `lib/aggregate.js` owns the pure fold and ranking; `lib/store.js` owns the rebuildable cache; `lib/index.js` registers the observer and route; `lib/client.js` contributes the localized sidebar action and modal through the supported browser slots.
+The verification script uses the supplied DSH profile to resolve the persistence implementation and prints metadata counts from the supplied session root. It does not launch a DSH application. `lib/aggregate.js` owns the pure fold and ranking; `lib/store.js` owns the rebuildable cache; `lib/index.js` registers the observer and route; `lib/client.js` contributes the localized shared tab or standalone modal through supported browser slots.
+
+Client tests use the published DSH SlotRegistry, Cordis effects and UI primitives. Set `DSH_USAGE_CLIENT_PATH` to a compatible usage-plugin `lib/client.js` before running `node --test test/client.test.mjs` to include the optional cross-plugin DOM test. That test checks tab labels, preserved selection and unload behavior; JSDOM does not validate the usage plugin's Canvas charts.
 
 ## License
 

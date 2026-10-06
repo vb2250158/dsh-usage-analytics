@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 — 2026-10-06
+
+Skill usage contributes to the **Usage statistics** settings page through the optional `settings.usage-statistics.tab` slot provided by `dsh-usage-plugin` 1.22.0. The shared page offers **Usage & Cost** and **Skill usage** tabs. The standalone sidebar action and modal registrations are removed while the parent slot is declared and restored when it unloads, regardless of plugin load order.
+
+Visited Skill tabs keep their period, search and loaded counts when hidden, and stop browser requests and polling until active again. The statistics API, counting rules, retained-log cache and all/seven/thirty-day filters are unchanged. Tests exercise the published SlotRegistry, Cordis lifecycle, real primitives, declaration reloads and an optional cross-plugin DOM path.
+
 ## 1.1.1 — 2026-10-06
 
 Completed history scans retain their zero-count display while background tail refreshes run. The scanning status now describes an unfinished history build instead of every cached request's background refresh. Installation guidance explicitly includes enabling an already-installed bundle.
