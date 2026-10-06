@@ -76,10 +76,10 @@ test('step/turn/user/tool counters and day bucketing', () => {
   assert.equal(stats.hourTokens['9'], 5)
 })
 
-test('skill call with unparsable arguments falls back to the tool name', () => {
+test('skill call with unparsable arguments remains an unattributed attempt', () => {
   const stats = createSessionStats(header())
   foldEvents(stats, [ev('tool/call', { callId: 'c1', name: 'skill', arguments: '{broken' }, 1000, 0)])
-  assert.equal(stats.skills['skill'], 1)
+  assert.equal(stats.skills['(unknown skill)'], 1)
 })
 
 test('isFoldType ignores noise events (chunks, compaction, plugin rows)', () => {

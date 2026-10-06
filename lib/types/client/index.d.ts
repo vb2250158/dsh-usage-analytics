@@ -1,14 +1,10 @@
-/**
- * dsh-usage-analytics — browser half type surface.
- * Hand-written (the implementation is a plain-JS __ModuleLoader__ bundle).
- */
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+/** Browser loader factory exports; this entry is loaded by DSH's module loader. */
+import type { Context } from '@deepseek-ai/cordis'
 
-/** Locale namespace this plugin owns. */
-export declare const NS: 'dsh-usage-analytics'
-
-/** Services required by the browser half. */
+/** Browser services required for the localized sidebar action and modal. */
 export declare const inject: string[]
-
-/** Mount the sidebar entry + full-screen dashboard. */
-export declare function apply(ctx: ClientContext): void
+/**
+ * Register the reversible browser surfaces using supported DSH 0.2 slots.
+ * @param ctx - Browser Cordis context with slots and locale services.
+ */
+export declare function apply(ctx: Context): void

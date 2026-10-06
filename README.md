@@ -1,124 +1,73 @@
 # dsh-usage-analytics
 
-> Personal Agent usage analytics & activity dashboard for the DeepSeek Harness (dsh) Web GUI.
-> [中文文档](./README.zh.md) | 中文版
+[中文文档](./README.zh.md) · [Apache-2.0](./LICENSE)
 
-[![npm version](https://img.shields.io/npm/v/dsh-usage-analytics)](https://www.npmjs.com/package/dsh-usage-analytics)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
-[![dsh-plugin](https://img.shields.io/badge/dsh-plugin-available-4f6ef7)](https://github.com/topics/dsh-plugin)
+Version 1.1.0 of this fork adds a dedicated Skill usage page to the DeepSeek Harness Web GUI. Open **Skill statistics** beside Settings to see invocation counts, the number of Skills and sessions, and a searchable ranking with model calls, explicit user loads, and the most recent use.
 
-A **usage statistics / activity dashboard** for DeepSeek Harness. It adds a **Usage** entry at the bottom of the sidebar (next to Settings) that opens a full-screen dashboard aggregating your **real** Harness usage:
-
-- **Token totals** (input / output / cache hits / reasoning), **session activity**, a GitHub-style **contribution heatmap**, a **token trend** chart, a **token mix** breakdown, a **model share** ranking, plus **insights** (streaks, peak day, most-used model/tool/skill, …).
-- Data comes **only** from your local session event logs (`ctx.sessionPersistence`) — **no dsh core changes**, **no prompt content ever leaves your machine** (only event metadata and numeric usage are aggregated).
-
-## Features
-
-- **Full dashboard** — contribution heatmap, token trend (daily/weekly/hourly), token mix, model share, reasoning-effort / tool / skill / dynamic-plugin rankings, streaks and personal insights.
-- **Period filtering** — every chart follows the selected range (`Today` / `24h` / `7d` / `30d` / `90d` / `All time`), so the headline and the charts always agree.
-- **Model grouping by real name** — models served through several providers (e.g. `aaa/…`, `acme-gateway/…`) collapse into one row by their real model name; the provider list is kept as a hover tooltip, never shown inline.
-- **Ghost-session detection** — forked sessions that were copied but never ran are excluded from every aggregate, so duplicated logs can never inflate your numbers.
-- **Provider-console accounting** — the headline and heatmap use the raw convention (input incl. cache hits, matching what a billing console shows); the new-token figure is always available separately, so you can tell "new tokens" from "context re-reads".
-- **Local & private** — loopback-only API, no telemetry, no uploads, no prompt content collected or persisted.
-- **Incremental & instant** — per-session revision diffing + resumable folds; the dashboard serves the cached snapshot immediately and finishes scans in the background.
-
-## Understanding the numbers (important)
-
-DeepSeek-style APIs count **cache-hit prompt tokens as input** in their consoles. In long-running sessions with large contexts, every tool call re-sends the whole conversation, so **99%+ of "input" can be cache reads** — that is why a busy day can show *billions* of raw tokens while your actual **new** tokens are only tens of millions.
-
-This plugin follows that convention deliberately (so the dashboard matches your provider console), but always separates the three numbers:
-
-| Term | Meaning |
-| --- | --- |
-| **Input** | uncached (new) input tokens only |
-| **Cache hits** | prompt tokens served from the provider cache (re-reads) |
-| **Output** | generated tokens |
-
-If the raw totals feel too large, look at the **new-token** figures (day cells, hour buckets, and the "Input" line) — that is the usage you intuitively "produced".
+This fork is maintained at [vb2250158/dsh-usage-analytics](https://github.com/vb2250158/dsh-usage-analytics). It derives from [2327644800/dsh-usage-analytics](https://github.com/2327644800/dsh-usage-analytics), originally authored by lemon. The upstream license and attribution remain in place.
 
 ## Install
 
-### From npm (recommended)
+Install the fork from an immutable Git commit into the Web profile. Replace `<40-character-commit-sha>` with a published commit from this repository.
 
-```bash
-dsh plugin --profile <name> add dsh-usage-analytics
+```sh
+dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-commit-sha>
 ```
 
-Then restart the web service (profile bundles load at startup).
+Restart that profile, then open **Skill statistics** in the sidebar. This fork uses the DSH 0.2 persistence and browser extension APIs; its target package generation is `0.2.1-alpha.1`. Desktop carriers require those same APIs and plugin resolution support; no broader compatibility is implied.
 
-### Manual / local development
+## Use
 
-1. Copy the package to `data/profiles/web/plugins/dsh-usage-analytics/` (pure JS, no build step).
-2. Make it resolvable from the web profile's `node_modules/@local/dsh-usage-analytics` (a directory junction/symlink to step 1, or an actual copy — both work; note the two locations are **not** auto-synced, keep them in step).
-3. Add `dsh-usage-analytics` to `dsh.profile.bundles` in `data/profiles/web/package.json` (plus a `file:` dependency if you use `pnpm install`).
-4. Restart the web service.
+The default period is **Total count** (`all`). **Last seven days** (`7`) and **Last month** (`30`) use rolling intervals of seven and thirty days measured from the current timestamp, rather than calendar weeks or months. Counts, rows, session totals, and the most recent use all follow the selected period. Search filters the displayed Skill names; it does not change the period totals.
 
-After the restart:
+The ranking sorts by usage count, then Skill name. **Refresh** waits for a scan of the retained session logs. The page also refreshes automatically and displays scanning or stale-data status.
 
-- The sidebar footer shows a **Usage** entry → opens the full-screen dashboard;
-- `GET /api/dsh-usage-analytics/stats` returns the aggregate JSON (`?force=1` triggers a full rescan);
-- The browser bundle is served at `/plugins/@local/dsh-usage-analytics/client.js` (per the profile bundle roster).
+If the retained logs contain no Skill tool attempts or confirmed user loads, the page shows zero counts and an empty ranking.
 
-## Usage
+## What counts
 
-Click **Usage** in the sidebar footer. Use the period pills in the header to filter every chart (`Today`, `24h`, `7 days`, `30 days`, `90 days`, `All time`). Hover the heatmap cells for per-day details. The **刷新** button re-syncs from the session logs (first open after a cache-version bump rebuilds the aggregate in a few seconds).
+| Source | Counted event | Meaning |
+| --- | --- | --- |
+| Model | `tool/call` with `data.name === 'skill'` | A Skill tool attempt. Failed calls are included; a paired `tool/result` identifies reported failures. |
+| User | `user/message` with `data.source.kind === 'skill-invocation'` and `form === 'instructions'` | A Skill body that DSH confirmed and injected after an explicit user invocation. |
 
-## Data & privacy
+Plain slash-command text, Skill mentions, reading an arbitrary `SKILL.md`, and the Skill catalog do not count as confirmed user loads. A load or attempt does not demonstrate that the subsequent task succeeded. Calls with no valid Skill name appear under **Unknown Skill** and do not increase the number of named Skills.
 
-| Guarantee | How |
-| --- | --- |
-| Local only | Reads session logs through `ctx.sessionPersistence`; never writes into sessions; loopback-only HTTP routes with a same-origin fence |
-| Metadata only | Consumes event types and numeric `usage` fields only — no user-authored prompt content is collected, persisted, or served |
-| Failure-isolated | Every fold/listener is try/catch-contained; a failing analytics never affects the agent loop or the GUI (worst case: a stale cache served with `stale: true`) |
+Each row counts distinct sessions that used that Skill in the selected interval. The most recent use is the invocation timestamp within that interval. The reader starts after each persistence handle's exact `inheritedEventCount`, so a fork's copied history is counted in its original session only. Deleted sessions disappear after a successful scan; failed scans retain previous rows and report stale data.
 
-## Architecture
+## Configuration
 
-```
-Session events / sessions
-   └─> lib/aggregate.js   pure-function aggregation core (foldEvent / mergeInto / computeInsights / streaks)
-          └─> lib/store.js incremental cache: revision diffing + readFrom(fromSeq) single-source fold + JSON persistence
-                 └─> lib/index.js host plugin: /api/dsh-usage-analytics/stats route + background catch-up folding
-                        └─> lib/client.js browser bundle: sidebar.footer.action + shell.overlay official slots
-```
+Set these fields on the `usage-analytics` plugin row in the profile's Cordis configuration.
 
-- **Single-source fold (v3)** — tokens are folded only from the persisted log via `readFrom(fromSeq)`; the watermark advances only from persisted reads, so double counting is impossible.
-- **Incremental** — `sessionPersistence.listSnapshots()` exposes per-session stat revisions (header-only reads); unchanged sessions are skipped entirely, changed ones re-fold only their tail.
-- **Cache** — per-session fold results + revision watermarks are persisted to `<DSH_HOME>/usage-analytics/agg.json` (atomic write); `CACHE_VERSION` bumps rebuild the cache automatically.
-- **Per-model per-day buckets (v9)** — each model records daily new/raw/output/call totals so the model-share chart can follow the period selector.
-- **Ghost-fork detection (v6)** — a forked session whose whole usage predates its own creation is treated as a copied seed and excluded.
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `dataDir` | Empty | Derived cache directory; empty resolves to `<DSH_HOME>/cache/skill-usage`, or the default DSH home when the environment variable is absent. |
+| `autoRefreshMs` | `30000` | Browser refresh interval, at least 1000 ms. |
+| `scanPollMs` | `2000` | Browser polling interval during a scan, at least 100 ms. |
+| `backgroundRefreshMs` | `60000` | Background session scan interval, at least 1000 ms. |
+| `flushRefreshMs` | `15000` | Delay before an event-triggered scan, at least 0 ms. |
+| `foldConcurrency` | `4` | Simultaneous read-only session scans, an integer from 1 to 32. |
+
+The cache can be rebuilt from retained session logs. A cache version change rebuilds predecessor data automatically. Session revision tokens are compared only within the current persistence service instance.
+
+## Data and API
+
+The observer reads sessions through `sessionPersistence.list()`, `open(id, 'read')`, and `handle.read(offset)`, and closes every read handle. It never appends session events or registers a model-facing tool. Its cache stores invocation names, times, sequence numbers, source categories, call IDs, and result status; it does not store prompt text, Skill bodies, raw tool arguments, or result content. The browser receives only aggregate metadata.
+
+`GET /api/dsh-usage-analytics/stats?period=all` uses the Host connection's authentication and origin checks. Add `force=1` to rebuild before returning. The response contains only `generatedAt`, `period`, `from`, `skillUsage`, `refreshIntervalMs`, and `scan`. `from` is an inclusive epoch-ms cutoff or `null` for all retained history. The API also accepts `today`, `24h`, and `90`; the default interface offers `all`, `7`, and `30`.
+
+`skillUsage` contains overall source and failure counts, ranked `rows`, and local-calendar `days`. Rows include `name`, `calls`, `sessionCount`, `lastUsedAt`, `modelCalls`, `userCalls`, `failedCalls`, and `pendingCalls`. An invocation without a timestamp is included only in all-time statistics and has no invented last-use date. `pendingCalls` means no paired result is present in the observed log, not that the tool is still running.
 
 ## Development
 
-```bash
-npm test                    # node --test: aggregation core + client bundle smoke (zero dependencies)
-node scripts/verify-data.mjs   # print what the dashboard would show from real session data
-node scripts/smoke-host.mjs    # end-to-end smoke: real persistence + plugin apply + route handler
+```sh
+npm ci
+npm test
+node scripts/verify-data.mjs --profile-dir <profile-directory> --sessions-root <session-log-directory>
 ```
 
-Layout: `lib/` (host + client), `test/` (unit tests), `scripts/` (dev verification tools, not published).
-
-## Known limitations
-
-- **No cost estimates** — no local pricing table; a provider→price mapping extension point could be added later.
-- **Skill-level token attribution** — only skill *call counts* are tracked; tokens cannot be attributed to a single skill.
-- **Session duration** — approximated by the wall-clock span between the first and last event.
-- **Deleting a session does not immediately shrink the stats** — the aggregate cache keeps folded results until a full rebuild (`CACHE_VERSION` bump or clearing `agg.json` + restart). The dashboard itself already excludes ghost forks at snapshot time.
-- **Multi-window freshness** — host aggregation is in-process; concurrent writers to the cache file are safe (atomic rename) but last write wins.
-
-## FAQ
-
-**Why does a single day show billions of tokens?**
-That is the provider-console raw convention: it includes cache-hit prompt tokens. In long sessions with ~100k–800k token contexts, every call re-reads most of the context. Your actual new tokens that day are usually two orders of magnitude smaller — see [Understanding the numbers](#understanding-the-numbers-important).
-
-**Are the numbers fabricated?**
-No — every figure is summed from `assistant/message.usage` events recorded in your own session logs, per API call. Nothing is estimated, extrapolated, or injected.
-
-**Why don't deleted conversations reduce the totals?**
-Deletion removes the log, but the analytics cache keeps the already-folded statistics until a full rebuild. This is a documented limitation (see above).
-
-**What are "ghost sessions"?**
-Session forks that were created but never ran — their entire log is a copied seed of a parent conversation. Counting them would double-count the parent's tokens, so they are excluded automatically.
+The verification script uses the supplied DSH profile to resolve the persistence implementation and prints metadata counts from the supplied session root. It does not launch a DSH application. `lib/aggregate.js` owns the pure fold and ranking; `lib/store.js` owns the rebuildable cache; `lib/index.js` registers the observer and route; `lib/client.js` contributes the localized sidebar action and modal through the supported browser slots.
 
 ## License
 
-Apache-2.0 — see [LICENSE](./LICENSE).
+Apache-2.0. See [LICENSE](./LICENSE) and the [upstream repository](https://github.com/2327644800/dsh-usage-analytics) for the original project.

@@ -1,124 +1,73 @@
 # dsh-usage-analytics
 
-> DeepSeek Harness (dsh) Web GUI 的个人 Agent 使用统计与活动仪表盘。
-> [English README](./README.md) | English
+[English README](./README.md) · [Apache-2.0](./LICENSE)
 
-[![npm version](https://img.shields.io/npm/v/dsh-usage-analytics)](https://www.npmjs.com/package/dsh-usage-analytics)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
-[![dsh-plugin](https://img.shields.io/badge/dsh-plugin-available-4f6ef7)](https://github.com/topics/dsh-plugin)
+此 fork 的 1.1.0 版本为 DeepSeek Harness Web GUI 增加专门的 Skill 使用统计界面。点击设置旁的「技能统计」，查看使用次数、Skill 数量、使用会话数，以及可搜索的次数排行榜；每行包含模型调用、用户显式加载和最近使用时间。
 
-为 DeepSeek Harness 打造的**用量统计 / 活动仪表盘**插件。在侧边栏底部（Settings 旁）新增 **用量统计 / Usage** 入口，打开一个全屏 Dashboard，展示你**真实**的 Harness 使用记录：
-
-- **Token 总量**（输入 / 输出 / 缓存命中 / 推理）、**会话活跃度**、GitHub 风格**活动热力图**、**Token 趋势**、**Token 构成**、**模型分布**，以及**个人洞察**（连续活跃、峰值日、最常用模型/工具/Skill 等）。
-- 数据**完全来自本地会话事件日志**（`ctx.sessionPersistence`），**不修改任何 Harness 核心**，**不采集、不持久化、不上传任何 Prompt 内容**（只聚合事件元数据与数值）。
-
-## 功能特性
-
-- **完整仪表盘** — 活动热力图、Token 趋势（日/周/小时）、Token 构成、模型分布、推理强度 / 工具 / Skill / 动态插件排行、连续活跃天数与个人洞察。
-- **时间段筛选** — 所有图表跟随右上角区间（`今天` / `24小时` / `近7天` / `近30天` / `近90天` / `全部`），头版与图表口径始终一致。
-- **按真实模型名汇总** — 同一模型经多个 provider 提供（如 `aaa/…`、`acme-gateway/…`）时，按真实模型名合并为一行；provider 列表仅保留在悬停提示中，不占正文。
-- **幽灵会话检测** — 复制后从未运行的 fork 会话被自动排除，重复日志不会虚增你的统计。
-- **厂商口径记账** — 头版与热力图使用 raw 口径（输入含缓存命中，与计费控制台一致）；新 token 数字始终单独可见，方便区分"新增"与"上下文重读"。
-- **本地且私密** — API 仅限回环访问，无遥测、无上传、不采集不持久化 Prompt 内容。
-- **增量且秒开** — 每会话 revision 差分 + 可续折；仪表盘先返回缓存快照，后台完成扫描。
-
-## 数字口径说明（重要）
-
-DeepSeek 系 API 在控制台中把**缓存命中的输入 token 也计入"输入"**。长会话 + 大上下文时，每次工具调用都会重发整段对话，因此**"输入"里 99%+ 可能是缓存读取**——这就是为什么忙碌的一天 raw 口径能到*几十亿*，而你真正**新增**的 token 往往只有几千万。
-
-本插件刻意沿用该约定（让仪表盘与厂商控制台对得上），但始终把三个数字分开：
-
-| 术语 | 含义 |
-| --- | --- |
-| **输入** | 仅未缓存（新增）输入 token |
-| **缓存命中** | 命中供应商缓存的 prompt token（重复读取） |
-| **输出** | 生成 token |
-
-如果 raw 总量显得过大，请看**新 token** 口径（日格子、小时桶、"输入"行）——那才是你直觉上"产生"的用量。
+此 fork 维护于 [vb2250158/dsh-usage-analytics](https://github.com/vb2250158/dsh-usage-analytics)，基于 lemon 编写的 [2327644800/dsh-usage-analytics](https://github.com/2327644800/dsh-usage-analytics)。保留上游许可证与作者归属。
 
 ## 安装
 
-### 通过 npm（推荐）
+使用本仓库已公开提交的完整 40 位 Git SHA 固定安装版本，替换命令中的 `<40-character-commit-sha>`。
 
-```bash
-dsh plugin --profile <名称> add dsh-usage-analytics
+```sh
+dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-commit-sha>
 ```
 
-然后重启 Web 服务（profile bundle 在启动时装载）。
-
-### 手动 / 本地开发
-
-1. 把包复制到 `data/profiles/web/plugins/dsh-usage-analytics/`（纯 JS，无需构建）。
-2. 让 web profile 的 `node_modules/@local/dsh-usage-analytics` 可解析到该目录（用 junction/符号链接，或直接复制一份——两者皆可；**注意两个位置不会自动同步**，改动需保持一致）。
-3. 在 `data/profiles/web/package.json` 的 `dsh.profile.bundles` 追加 `dsh-usage-analytics`（若用 `pnpm install` 还需加 `file:` 依赖）。
-4. 重启 Web 服务。
-
-重启后：
-
-- 侧边栏底部出现「用量统计 / Usage」入口 → 打开全屏 Dashboard；
-- `GET /api/dsh-usage-analytics/stats` 返回聚合 JSON（`?force=1` 全量重扫）；
-- 浏览器包按 profile bundle roster 提供（`/plugins/@local/dsh-usage-analytics/client.js`）。
+重启对应 profile 后，打开侧边栏「技能统计」。此 fork 使用 DSH 0.2 的持久化与浏览器扩展 API，目标包代际为 `0.2.1-alpha.1`。桌面封装需要提供相同 API 与插件解析能力；不据此声明其他版本兼容。
 
 ## 使用
 
-点击侧边栏底部 **用量统计**。用头部的时间胶囊筛选所有图表（今天 / 24小时 / 近7天 / 近30天 / 近90天 / 全部）。悬停热力图格子查看每日详情。「刷新」按钮从会话日志重新同步（缓存版本升级后的首次打开会自动重建聚合，需几秒）。
+默认选择「总次数」（`all`），另提供「最近七天」（`7`）与「最近一个月」（`30`）。后两项从当前时间向前计算连续 7 天、30 天，不按自然周或自然月计算。次数、排行榜、使用会话数和最近使用时间均跟随所选区间。搜索只筛选显示的 Skill 名称，不改变区间汇总数字。
 
-## 数据与隐私
+排行榜按次数降序、Skill 名称排序。「刷新」等待扫描保留的会话日志后返回；界面也会自动刷新，并显示扫描中或数据过期状态。
 
-| 保证 | 实现 |
-| --- | --- |
-| 仅本地 | 通过 `ctx.sessionPersistence` 读会话日志；绝不写入会话；HTTP 路由仅限回环 + 同源围栏 |
-| 仅元数据 | 只消费事件类型与数值 `usage` 字段——用户 Prompt 内容不采集、不持久化、不提供 |
-| 故障隔离 | 每次折叠/监听均 try/catch 包裹；统计故障绝不影响 Agent 循环或 GUI（最坏情况：返回带 `stale: true` 的旧缓存） |
+保留的日志没有 Skill 工具调用尝试或已确认的用户加载记录时，界面显示 0 次和空排行榜。
 
-## 架构
+## 计数口径
 
-```
-Session events / sessions
-   └─> lib/aggregate.js   聚合核心（纯函数：foldEvent / mergeInto / computeInsights / streaks）
-          └─> lib/store.js 增量缓存：revision 差分 + readFrom(fromSeq) 单源折叠 + JSON 持久化
-                 └─> lib/index.js 宿主插件：/api/dsh-usage-analytics/stats 路由 + 后台补折
-                        └─> lib/client.js 浏览器端：sidebar.footer.action + shell.overlay 官方 Slot
-```
+| 来源 | 计入的事件 | 含义 |
+| --- | --- | --- |
+| 模型 | `tool/call`，且 `data.name === 'skill'` | Skill 工具调用尝试，包括失败；配对的 `tool/result` 标明已报告的失败。 |
+| 用户 | `user/message`，且 `data.source.kind === 'skill-invocation'`、`form === 'instructions'` | 用户显式调用后，DSH 已确认并注入的 Skill 正文。 |
 
-- **单源折叠（v3）** — 只从持久化日志 `readFrom(fromSeq)` 折叠，水印仅由持久化读取推进，不可能重复计数。
-- **增量** — `sessionPersistence.listSnapshots()` 提供每会话 stat revision（只读头）；未变化会话整跳过，变化会话只折叠尾部。
-- **缓存** — 每会话折叠结果 + revision 水印持久化到 `<DSH_HOME>/usage-analytics/agg.json`（原子写）；`CACHE_VERSION` 变更自动全量重建。
-- **模型按天桶（v9）** — 每个模型记录每日 新增/raw/输出/调用 计数，使模型分布图可跟随时间段筛选。
-- **幽灵 fork 检测（v6）** — 全部 usage 早于自身创建时间的 fork 会话视为复制种子，自动排除。
+普通斜杠指令文本、提示词提及、读取任意 `SKILL.md` 和 Skill 目录展示不作为已确认的用户加载次数。加载或调用记录不能证明后续任务执行成功。参数中没有有效 Skill 名称的调用归入「未知 Skill」，不增加已命名的 Skill 数量。
+
+每行会话数是所选区间内使用该 Skill 的不同会话数量；最近使用是区间内最后一次调用或加载的时间。读取从持久化 handle 的准确 `inheritedEventCount` 后开始，因此 fork 复制的历史只在原会话计数。删除的会话在成功扫描后移出统计；扫描失败时保留之前的记录并标记数据过期。
+
+## 配置
+
+在 profile 的 Cordis 配置中为 `usage-analytics` 插件行设置以下字段。
+
+| 字段 | 默认值 | 用途 |
+| --- | --- | --- |
+| `dataDir` | 空 | 派生缓存目录；空值使用 `<DSH_HOME>/cache/skill-usage`，未设置该环境变量时使用默认 DSH home。 |
+| `autoRefreshMs` | `30000` | 浏览器自动刷新间隔，最少 1000 毫秒。 |
+| `scanPollMs` | `2000` | 扫描中的浏览器轮询间隔，最少 100 毫秒。 |
+| `backgroundRefreshMs` | `60000` | 后台会话扫描间隔，最少 1000 毫秒。 |
+| `flushRefreshMs` | `15000` | 会话事件触发扫描前的等待时间，最少 0 毫秒。 |
+| `foldConcurrency` | `4` | 同时读取会话的数量，1 至 32 的整数。 |
+
+缓存可从保留的会话日志重建。缓存版本升级会自动重建旧版本数据；会话 revision 仅在当前持久化服务实例内比较。
+
+## 数据与 API
+
+观察器通过 `sessionPersistence.list()`、`open(id, 'read')` 和 `handle.read(offset)` 读取会话，并关闭每个只读 handle。它不追加会话事件，不注册模型可见工具。缓存保存调用名称、时间、序号、来源分类、调用 ID 和结果状态，不保存提示词、Skill 正文、原始工具参数或结果内容。浏览器只收到汇总元数据。
+
+`GET /api/dsh-usage-analytics/stats?period=all` 使用 Host connection 的身份认证与来源检查。追加 `force=1` 可在返回前重建。响应仅包含 `generatedAt`、`period`、`from`、`skillUsage`、`refreshIntervalMs` 和 `scan`。`from` 是包含该时刻的毫秒时间戳；统计全部保留历史时为 `null`。API 也支持 `today`、`24h` 和 `90`；默认界面提供 `all`、`7`、`30`。
+
+`skillUsage` 包含总次数、来源与失败计数、排行榜 `rows` 和本地日历日期汇总 `days`。每行包含 `name`、`calls`、`sessionCount`、`lastUsedAt`、`modelCalls`、`userCalls`、`failedCalls`、`pendingCalls`。缺少时间戳的调用只计入总次数，不编造最近使用时间。`pendingCalls` 表示已观察日志中尚无配对结果，不能据此判断工具仍在运行。
 
 ## 开发
 
-```bash
-npm test                    # node --test：聚合核心 + 客户端 bundle 冒烟（零依赖）
-node scripts/verify-data.mjs   # 用真实会话数据打印仪表盘将展示的统计
-node scripts/smoke-host.mjs    # 端到端冒烟：真实 persistence + 插件 apply + 路由处理器
+```sh
+npm ci
+npm test
+node scripts/verify-data.mjs --profile-dir <profile-directory> --sessions-root <session-log-directory>
 ```
 
-目录：`lib/`（宿主 + 客户端）、`test/`（单元测试）、`scripts/`（开发验证工具，不入包）。
+验证脚本通过给定 DSH profile 解析持久化实现，从指定会话目录读取元数据计数，不启动 DSH 应用。`lib/aggregate.js` 负责纯函数聚合与排序，`lib/store.js` 负责可重建缓存，`lib/index.js` 注册观察器与路由，`lib/client.js` 通过受支持的浏览器 Slot 提供本地化侧边栏入口和弹窗。
 
-## 已知边界
+## 许可证
 
-- **费用估算**：无本地定价表，不展示金额（未来可加 provider→price 映射扩展点）。
-- **Skill 级 Token 归因**：只统计 skill 调用次数，无法把 Token 精确归属到单个 Skill。
-- **会话时长**：以首个/最后一个事件的墙钟时间差近似。
-- **删除会话不会立即减少统计**：聚合缓存保留已折叠结果，直到全量重建（`CACHE_VERSION` 升级，或删除 `agg.json` 后重启）。仪表盘本身在快照时已排除幽灵 fork。
-- **多窗口实时性**：宿主端聚合在进程内；并发写缓存文件以原子重命名保证安全，但以最后写入为准。
-
-## FAQ
-
-**为什么某一天有几十亿 token？**
-这是厂商 raw 口径：包含缓存命中的 prompt token。长会话 + 40万~80万上下文时，每次调用都在重读大部分上下文。当天真正的"新 token"通常小两个数量级——见[数字口径说明](#数字口径说明重要)。
-
-**数字是伪造的吗？**
-不是——每个数字都来自你自己会话日志中 `assistant/message.usage` 事件的逐次累加。没有任何估算、外推或注入。
-
-**为什么删除对话后总量不减？**
-删除只移除日志，统计缓存里已折叠的结果会保留到全量重建。这是已记录的限制（见上文）。
-
-**什么是"幽灵会话"？**
-创建后从未运行的会话 fork——其整段日志是父会话的复制种子。统计它们会重复计算父会话的 token，因此会被自动排除。
-
-## License
-
-Apache-2.0 — 见 [LICENSE](./LICENSE)。
+Apache-2.0，见 [LICENSE](./LICENSE) 与[上游仓库](https://github.com/2327644800/dsh-usage-analytics)。
