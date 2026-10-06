@@ -76,7 +76,7 @@ node scripts/verify-data.mjs --profile-dir <profile-directory> --sessions-root <
 
 验证脚本通过给定 DSH profile 解析持久化实现，从指定会话目录读取元数据计数，不启动 DSH 应用。`lib/aggregate.js` 负责纯函数聚合与排序，`lib/store.js` 负责可重建缓存，`lib/index.js` 注册观察器与路由，`lib/client.js` 通过受支持的浏览器 Slot 提供本地化共享标签或独立弹窗。
 
-客户端测试使用已发布的 DSH SlotRegistry、Cordis effect 与 UI primitives。将 `DSH_USAGE_CLIENT_PATH` 设置为兼容用量插件的 `lib/client.js` 路径，再运行 `node --test test/client.test.mjs`，可包含可选的跨插件 DOM 测试。该测试验证标签文案、选择保留和卸载行为；JSDOM 不验证用量插件的 Canvas 图表。
+客户端测试使用已发布的 DSH SlotRegistry、Cordis effect 与 UI primitives。将 `DSH_USAGE_CLIENT_PATH` 设置为兼容用量插件的 `lib/client.js` 路径，再运行 `node --test test/client.test.mjs`，可包含可选的跨插件 DOM 测试。测试提供视图拥有者的公开导航方法 `uiWorkspace.openSession`；`ISessions` 没有 `open` 方法。测试验证标签文案、选择保留、导航调用和卸载行为；JSDOM 不验证用量插件的 Canvas 图表或真实 Host 会话切换。
 
 ## 许可证
 

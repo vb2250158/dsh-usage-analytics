@@ -76,7 +76,7 @@ node scripts/verify-data.mjs --profile-dir <profile-directory> --sessions-root <
 
 The verification script uses the supplied DSH profile to resolve the persistence implementation and prints metadata counts from the supplied session root. It does not launch a DSH application. `lib/aggregate.js` owns the pure fold and ranking; `lib/store.js` owns the rebuildable cache; `lib/index.js` registers the observer and route; `lib/client.js` contributes the localized shared tab or standalone modal through supported browser slots.
 
-Client tests use the published DSH SlotRegistry, Cordis effects and UI primitives. Set `DSH_USAGE_CLIENT_PATH` to a compatible usage-plugin `lib/client.js` before running `node --test test/client.test.mjs` to include the optional cross-plugin DOM test. That test checks tab labels, preserved selection and unload behavior; JSDOM does not validate the usage plugin's Canvas charts.
+Client tests use the published DSH SlotRegistry, Cordis effects and UI primitives. Set `DSH_USAGE_CLIENT_PATH` to a compatible usage-plugin `lib/client.js` before running `node --test test/client.test.mjs` to include the optional cross-plugin DOM test. The test provides the public view-owner navigation method `uiWorkspace.openSession`; `ISessions` has no `open` method. It checks tab labels, preserved selection, navigation calls and unload behavior; JSDOM does not validate the usage plugin's Canvas charts or a real Host session transition.
 
 ## License
 

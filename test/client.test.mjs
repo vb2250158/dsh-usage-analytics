@@ -312,7 +312,7 @@ async function runtime(fetcher) {
   globalThis.fetch = fetcher
   const ctx = new Cordis.Context()
   const dictionaries = new Map()
-  const intervals = [], openedSessions = []
+  const intervals = [], navigatedSessions = []
   let closedSettings = 0
   let snapshot = { active: 'zh', revision: 0 }
   const localeListeners = new Set()
@@ -341,13 +341,13 @@ async function runtime(fetcher) {
       return () => { interval.stopped = true }
     }
   }
-  class TestSessions extends Cordis.Service {
-    constructor(ctx) { super(ctx, 'sessions') }
-    open(id) { assert.equal(id, 'session-test'); openedSessions.push(id) }
+  class TestUiWorkspace extends Cordis.Service {
+    constructor(ctx) { super(ctx, 'uiWorkspace') }
+    openSession(target) { assert.equal(target, 'session-test'); navigatedSessions.push(target) }
   }
   await ctx.plugin({ name: 'test-locale', apply: ctx => { new TestLocale(ctx) } }).await()
   await ctx.plugin({ name: 'test-timer', apply: ctx => { new TestTimer(ctx) } }).await()
-  await ctx.plugin({ name: 'test-sessions', apply: ctx => { new TestSessions(ctx) } }).await()
+  await ctx.plugin({ name: 'test-ui-workspace', apply: ctx => { new TestUiWorkspace(ctx) } }).await()
   await ctx.plugin({ name: 'test-renderer', apply: renderer.apply }).await()
   ctx.slots.installLocale(ctx.locale)
   const absentBinding = { key: undefined, hooks: {}, keyedHooks: {}, props: {} }
@@ -393,7 +393,7 @@ async function runtime(fetcher) {
   }
   return {
     ctx, mountAnalytics, mountOwner,
-    intervals, openedSessions,
+    intervals, navigatedSessions,
     getClosedSettings: () => closedSettings,
     localeSubscriberCount: () => localeListeners.size,
     setLanguage: async language => { await act(async () => ctx.locale.setLanguage(language)) },
@@ -550,7 +550,7 @@ test('real usage-plugin and analytics share localized tabs, preserve selection a
     const sessionLink = document.querySelector('[data-dsh-usage-sessionlink]')
     assert.ok(sessionLink)
     await act(async () => sessionLink.click())
-    assert.deepEqual(mounted.openedSessions, ['session-test'], 'ctx.get(sessions) invokes the active provided service')
+    assert.deepEqual(mounted.navigatedSessions, ['session-test'], 'uiWorkspace.openSession invokes the public view-owner navigation service')
     assert.equal(mounted.getClosedSettings(), 1)
     assert.equal(requests.filter(url => url.startsWith('/api/dsh-usage-analytics/')).length, 0)
     await clickText('Skill 使用')
