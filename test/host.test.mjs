@@ -145,6 +145,29 @@ test('first authorized HTTP read waits for the session scan and returns real ski
   assert.equal(f.observations.intervals[0].delay, 60000)
 })
 
+test('a completed zero-count scan remains visible during an ordinary background tail refresh', async t => {
+  const f = await fixture(t, [])
+  const first = await f.request()
+  assert.equal(first.body.skillUsage.totalCalls, 0)
+  assert.equal(first.body.scan.pending, false)
+  f.source.revision = 'revision-2'
+  let entered
+  const readEntered = new Promise(resolve => { entered = resolve })
+  let release
+  const readReleased = new Promise(resolve => { release = resolve })
+  f.source.beforeRead = async () => { entered(); await readReleased }
+  try {
+    const { response, body } = await f.request()
+    await readEntered
+    assert.equal(response.status, 200)
+    assert.equal(body.skillUsage.totalCalls, 0)
+    assert.equal(body.scan.failed, 0)
+    assert.equal(body.scan.stale, false)
+    assert.equal(body.scan.pending, false)
+    assert.equal(f.observations.reads.length, 2)
+  } finally { release() }
+})
+
 test('HTTP authentication and origin rejections prevent any session scan, including unsupported methods', async t => {
   const f = await fixture(t)
   assert.equal((await f.request('', { authenticated: false })).response.status, 401)

@@ -2,7 +2,7 @@
 
 [中文文档](./README.zh.md) · [Apache-2.0](./LICENSE)
 
-Version 1.1.0 of this fork adds a dedicated Skill usage page to the DeepSeek Harness Web GUI. Open **Skill statistics** beside Settings to see invocation counts, the number of Skills and sessions, and a searchable ranking with model calls, explicit user loads, and the most recent use.
+Version 1.1.1 of this fork adds a dedicated Skill usage page to the DeepSeek Harness Web GUI. Open **Skill statistics** beside Settings to see invocation counts, the number of Skills and sessions, and a searchable ranking with model calls, explicit user loads, and the most recent use.
 
 This fork is maintained at [vb2250158/dsh-usage-analytics](https://github.com/vb2250158/dsh-usage-analytics). It derives from [2327644800/dsh-usage-analytics](https://github.com/2327644800/dsh-usage-analytics), originally authored by lemon. The upstream license and attribution remain in place.
 
@@ -14,7 +14,7 @@ Install the fork from an immutable Git commit into the Web profile. Replace `<40
 dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-commit-sha>
 ```
 
-Restart that profile, then open **Skill statistics** in the sidebar. This fork uses the DSH 0.2 persistence and browser extension APIs; its target package generation is `0.2.1-alpha.1`. Desktop carriers require those same APIs and plugin resolution support; no broader compatibility is implied.
+Ensure `dsh-usage-analytics` is selected in the profile's `dsh.profile.bundles` list; an already-installed but disabled bundle can be enabled in DSH's plugin manager. Restart that profile, then open **Skill statistics** in the sidebar. This fork uses the DSH 0.2 persistence and browser extension APIs; its target package generation is `0.2.1-alpha.1`. Desktop carriers require those same APIs and plugin resolution support; no broader compatibility is implied.
 
 ## Use
 
@@ -57,6 +57,8 @@ The observer reads sessions through `sessionPersistence.list()`, `open(id, 'read
 `GET /api/dsh-usage-analytics/stats?period=all` uses the Host connection's authentication and origin checks. Add `force=1` to rebuild before returning. The response contains only `generatedAt`, `period`, `from`, `skillUsage`, `refreshIntervalMs`, and `scan`. `from` is an inclusive epoch-ms cutoff or `null` for all retained history. The API also accepts `today`, `24h`, and `90`; the default interface offers `all`, `7`, and `30`.
 
 `skillUsage` contains overall source and failure counts, ranked `rows`, and local-calendar `days`. Rows include `name`, `calls`, `sessionCount`, `lastUsedAt`, `modelCalls`, `userCalls`, `failedCalls`, and `pendingCalls`. An invocation without a timestamp is included only in all-time statistics and has no invented last-use date. `pendingCalls` means no paired result is present in the observed log, not that the tool is still running.
+
+`scan.pending` describes an unfinished history build. After a completed scan, background tail refreshes retain the observed counts, including zero; `scan.stale` and `scan.failed` report incomplete reads.
 
 ## Development
 

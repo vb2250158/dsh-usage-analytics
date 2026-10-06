@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 — 2026-10-06
+
+Completed history scans retain their zero-count display while background tail refreshes run. The scanning status now describes an unfinished history build instead of every cached request's background refresh. Installation guidance explicitly includes enabling an already-installed bundle.
+
 ## 1.1.0 — 2026-10-06
 
 This fork replaces the upstream general usage dashboard with a dedicated Skill usage page. The default view shows total counts, with rolling seven-day and thirty-day filters, name search, usage ranking, distinct-session counts, source counts, and the most recent use.

@@ -2,7 +2,7 @@
 
 [English README](./README.md) · [Apache-2.0](./LICENSE)
 
-此 fork 的 1.1.0 版本为 DeepSeek Harness Web GUI 增加专门的 Skill 使用统计界面。点击设置旁的「技能统计」，查看使用次数、Skill 数量、使用会话数，以及可搜索的次数排行榜；每行包含模型调用、用户显式加载和最近使用时间。
+此 fork 的 1.1.1 版本为 DeepSeek Harness Web GUI 增加专门的 Skill 使用统计界面。点击设置旁的「技能统计」，查看使用次数、Skill 数量、使用会话数，以及可搜索的次数排行榜；每行包含模型调用、用户显式加载和最近使用时间。
 
 此 fork 维护于 [vb2250158/dsh-usage-analytics](https://github.com/vb2250158/dsh-usage-analytics)，基于 lemon 编写的 [2327644800/dsh-usage-analytics](https://github.com/2327644800/dsh-usage-analytics)。保留上游许可证与作者归属。
 
@@ -14,7 +14,7 @@
 dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-commit-sha>
 ```
 
-重启对应 profile 后，打开侧边栏「技能统计」。此 fork 使用 DSH 0.2 的持久化与浏览器扩展 API，目标包代际为 `0.2.1-alpha.1`。桌面封装需要提供相同 API 与插件解析能力；不据此声明其他版本兼容。
+确认 profile 的 `dsh.profile.bundles` 列表已选择 `dsh-usage-analytics`；已安装但未启用的 bundle 可在 DSH 插件管理中启用。重启对应 profile 后，打开侧边栏「技能统计」。此 fork 使用 DSH 0.2 的持久化与浏览器扩展 API，目标包代际为 `0.2.1-alpha.1`。桌面封装需要提供相同 API 与插件解析能力；不据此声明其他版本兼容。
 
 ## 使用
 
@@ -57,6 +57,8 @@ dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-
 `GET /api/dsh-usage-analytics/stats?period=all` 使用 Host connection 的身份认证与来源检查。追加 `force=1` 可在返回前重建。响应仅包含 `generatedAt`、`period`、`from`、`skillUsage`、`refreshIntervalMs` 和 `scan`。`from` 是包含该时刻的毫秒时间戳；统计全部保留历史时为 `null`。API 也支持 `today`、`24h` 和 `90`；默认界面提供 `all`、`7`、`30`。
 
 `skillUsage` 包含总次数、来源与失败计数、排行榜 `rows` 和本地日历日期汇总 `days`。每行包含 `name`、`calls`、`sessionCount`、`lastUsedAt`、`modelCalls`、`userCalls`、`failedCalls`、`pendingCalls`。缺少时间戳的调用只计入总次数，不编造最近使用时间。`pendingCalls` 表示已观察日志中尚无配对结果，不能据此判断工具仍在运行。
+
+`scan.pending` 表示历史统计尚未完成构建。完整扫描后，后台刷新保留已观察次数，包括零值；`scan.stale` 与 `scan.failed` 报告未完成的读取。
 
 ## 开发
 
