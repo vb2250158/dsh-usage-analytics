@@ -85,3 +85,5 @@ Apache-2.0，见 [LICENSE](./LICENSE) 与[上游仓库](https://github.com/23276
 ## 插件名称与图标
 
 插件列表跟随 DSH 界面语言，中文显示“Skill 使用统计”，英文显示“Skill usage statistics”。`locale/en.json` 和 `locale/zh.json` 提供名称与说明，`icon.svg` 提供自包含图标，均随安装包发布并通过资源导出访问。图标改编自 Lucide，授权见 [ICON_LICENSE.txt](ICON_LICENSE.txt)。
+
+图标使用居中的 36 × 36 视区，为绘制内容保留留白，使其在插件图标框中的显示比例更紧凑。
