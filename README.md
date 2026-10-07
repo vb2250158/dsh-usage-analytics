@@ -81,3 +81,7 @@ Client tests use the published DSH SlotRegistry, Cordis effects and UI primitive
 ## License
 
 Apache-2.0. See [LICENSE](./LICENSE) and the [upstream repository](https://github.com/2327644800/dsh-usage-analytics) for the original project.
+
+## Plugin display metadata
+
+The plugin list shows **Skill usage statistics** in English and **Skill 使用统计** in Chinese, following the DSH interface language. `locale/en.json` and `locale/zh.json` provide the title and description; `icon.svg` supplies self-contained artwork. The package exports and publishes these resources. The icon is adapted from Lucide; see [ICON_LICENSE.txt](ICON_LICENSE.txt).

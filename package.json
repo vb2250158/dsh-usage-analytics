@@ -1,6 +1,6 @@
 {
   "name": "dsh-usage-analytics",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "DSH skill invocation counts with all-time, last-seven-days and last-month rankings.",
   "type": "module",
   "main": "lib/index.js",
@@ -13,7 +13,9 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
   },
   "dsh": {
     "bundle": {
@@ -42,7 +44,10 @@
     "README.md",
     "README.zh.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "locale",
+    "icon.svg",
+    "ICON_LICENSE.txt"
   ],
   "license": "Apache-2.0",
   "author": "lemon",
@@ -109,5 +114,6 @@
     "zustand": "~4.4.7"
   },
   "types": "./lib/types/index.d.ts",
-  "upstreamRepository": "2327644800/dsh-usage-analytics"
+  "upstreamRepository": "2327644800/dsh-usage-analytics",
+  "icon": "./icon.svg"
 }

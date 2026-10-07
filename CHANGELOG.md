@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 (2026-10-07)
+
+- 为插件列表提供中英文名称与说明，并发布独立的 SVG 图标。
+- Publish English and Chinese plugin display metadata and a dedicated SVG icon.
+
 ## 1.2.0 — 2026-10-06
 
 Skill usage contributes to the **Usage statistics** settings page through the optional `settings.usage-statistics.tab` slot provided by `dsh-usage-plugin` 1.22.0. The shared page offers **Usage & Cost** and **Skill usage** tabs. The standalone sidebar action and modal registrations are removed while the parent slot is declared and restored when it unloads, regardless of plugin load order.

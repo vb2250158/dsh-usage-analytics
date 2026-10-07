@@ -81,3 +81,7 @@ node scripts/verify-data.mjs --profile-dir <profile-directory> --sessions-root <
 ## 许可证
 
 Apache-2.0，见 [LICENSE](./LICENSE) 与[上游仓库](https://github.com/2327644800/dsh-usage-analytics)。
+
+## 插件名称与图标
+
+插件列表跟随 DSH 界面语言，中文显示“Skill 使用统计”，英文显示“Skill usage statistics”。`locale/en.json` 和 `locale/zh.json` 提供名称与说明，`icon.svg` 提供自包含图标，均随安装包发布并通过资源导出访问。图标改编自 Lucide，授权见 [ICON_LICENSE.txt](ICON_LICENSE.txt)。
