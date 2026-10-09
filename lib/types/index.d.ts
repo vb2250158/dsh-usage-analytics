@@ -14,7 +14,7 @@ export declare const name: 'usage-analytics'
 /** Services required by the observer; the Web route is an optional injection. */
 export declare const inject: string[]
 /** Statistics route consumed by the browser face. */
-export declare const API: { stats: '/api/dsh-usage-analytics/stats' }
+export declare const API: { stats: '/api/dsh-usage-analytics/stats'; skill: '/api/dsh-usage-analytics/skill' }
 
 /**
  * Register the read-only observer and authenticated route as reversible effects.

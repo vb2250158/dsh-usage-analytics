@@ -154,6 +154,50 @@ test('registers locale-aware sidebar and overlay entries and releases effects', 
   assert.equal(document.querySelector('style[data-plugin-css="dsh-usage-analytics"]'), null)
 })
 
+test('shows catalog descriptions, searches descriptions and opens the current Skill in a keyboard-dismissable dialog', async () => {
+  const data = payload()
+  data.catalog = { available: true, entries: [{ name: 'alpha', description: '检查变更与配置' }] }
+  const requests = []
+  const mounted = await mount(url => {
+    requests.push(url)
+    return respond(url.includes('/skill?') ? { name: 'alpha', title: '配置检查', description: '检查变更与配置', content: '# 配置检查\n\n只读检查。\n\n```js\nconsole.log("example")\n```' } : data)
+  })
+  try {
+    await mounted.open()
+    await flush()
+    assert.equal(document.querySelector('[aria-label="查看 alpha"]').textContent, 'alpha')
+    assert.match(document.querySelector('.dshua-table').textContent, /检查变更与配置/)
+    const input = document.querySelector('input[type="search"]')
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(input, '配置')
+      input.dispatchEvent(new dom.window.Event('input', { bubbles: true }))
+    })
+    assert.equal(document.querySelectorAll('.dshua-table tbody tr').length, 1)
+    assert.equal(document.querySelector('.dshua-statValue').textContent, '7')
+    await clickText('alpha')
+    await flush()
+    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/skill?name=alpha')
+    assert.equal(document.querySelector('.dshua-detail h2').textContent, '配置检查')
+    assert.match(document.querySelector('.dshua-detailBody').textContent, /只读检查/)
+    assert.match(document.querySelector('.dshua-detailBody').textContent, /console\.log/)
+    await act(async () => document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    assert.equal(document.querySelector('.dshua-detail'), null)
+    assert.ok(document.querySelector('.dshua-table'))
+  } finally { await mounted.dispose() }
+})
+
+test('removed Skills keep historical counts and show a readable missing-definition state', async () => {
+  const mounted = await mount(url => url.includes('/skill?') ? Promise.resolve({ ok: false, status: 404 }) : respond(payload()))
+  try {
+    await mounted.open()
+    await flush()
+    await clickText('alpha')
+    await flush()
+    assert.match(document.querySelector('.dshua-detail').textContent, /已移除/)
+    assert.equal(document.querySelector('.dshua-statValue').textContent, '7')
+  } finally { await mounted.dispose() }
+})
+
 test('ranks real Host counts, searches without changing totals, and exposes only requested periods', async () => {
   const requests = []
   const mounted = await mount(url => { requests.push(url); return respond(payload()) }, { storage: 'bad-period' })

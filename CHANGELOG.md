@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0 (2026-10-09)
+
+- 顶部汇总改为紧凑摘要，Skill 名称下显示说明；搜索支持说明，点击名称查看当前定义，支持键盘关闭、加载错误和技能移除提示。
+- Compact summary, catalog descriptions and description search; accessible current-definition dialogs with retry and missing-Skill states.
+
 ## 1.2.2 (2026-10-07)
 
 - 缩小图标绘制内容约三分之一，增加方框内的留白。

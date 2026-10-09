@@ -34,8 +34,12 @@ async function fixture(t, events = [invocation(0, 'review')]) {
       return ctx.effect(() => () => listeners.delete(name))
     },
     inject(dependencies, mount) {
-      assert.deepEqual(dependencies, ['webServer', 'connection'])
+      assert.ok(JSON.stringify(dependencies) === JSON.stringify(['webServer', 'connection']) || JSON.stringify(dependencies) === JSON.stringify(['skills']))
       return mount(ctx)
+    },
+    skills: {
+      async list() { return [{ name: 'review', description: 'Review changes' }] },
+      async get(name) { return name === 'review' ? { name, description: 'Review changes', content: '# Code review\n\nInspect changes.\n' } : undefined },
     },
     timer: {
       interval(callback, delay) {
@@ -66,7 +70,7 @@ async function fixture(t, events = [invocation(0, 'review')]) {
     webServer: {
       register(route) {
         assert.equal(route.kind, 'exact')
-        assert.equal(route.path, API.stats)
+        assert.ok(Object.values(API).includes(route.path))
         assert.equal(routes.has(route.path), false)
         routes.set(route.path, route)
         return () => routes.delete(route.path)
@@ -243,4 +247,24 @@ test('Host disposal unregisters the route and awaits a final readable metadata c
   const cache = JSON.parse(await readFile(join(f.tempRoot, 'agg.json'), 'utf8'))
   assert.equal(cache.sessions[0].skillInvocations.length, 1)
   assert.equal((await fetch(f.baseUrl + API.stats)).status, 404)
+})
+
+test('current catalog descriptions and on-demand definitions share the authenticated read-only provider', async t => {
+  const f = await fixture(t)
+  assert.deepEqual((await f.request()).body.catalog, { available: true, entries: [{ name: 'review', description: 'Review changes' }] })
+  const read = async (query, options = {}) => fetch(f.baseUrl + API.skill + query, { ...options, headers: { Cookie: 'test-auth=accepted', ...options.headers } })
+  const response = await read('?name=review')
+  assert.equal(response.status, 200)
+  assert.deepEqual(await response.json(), { name: 'review', title: 'Code review', description: 'Review changes', content: '# Code review\n\nInspect changes.\n' })
+  assert.equal((await fetch(f.baseUrl + API.skill + '?name=review')).status, 401)
+  assert.equal((await read('?name=review', { headers: { Origin: 'https://untrusted.example' } })).status, 403)
+  assert.equal((await read('?name=../secrets')).status, 400)
+  assert.equal((await read('?name=review', { method: 'POST' })).status, 405)
+  assert.equal((await read('?name=removed')).status, 404)
+  f.ctx.skills.get = async () => { throw new Error('Provider offline') }
+  assert.equal((await read('?name=review')).status, 503)
+  f.ctx.skills.list = async () => { throw new Error('Provider offline') }
+  const fallback = await f.request()
+  assert.equal(fallback.body.skillUsage.totalCalls, 1)
+  assert.deepEqual(fallback.body.catalog, { available: false, entries: [] })
 })
