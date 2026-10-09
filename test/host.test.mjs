@@ -1,10 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, relative, isAbsolute } from 'node:path'
 import { API, apply } from '../lib/index.js'
+import { createSessionStats, foldEvents } from '../lib/aggregate.js'
 
 function invocation(seq, name, time = Date.now()) {
   return {
@@ -13,7 +14,7 @@ function invocation(seq, name, time = Date.now()) {
   }
 }
 
-async function fixture(t, events = [invocation(0, 'review')]) {
+async function fixture(t, events = [invocation(0, 'review')], cached) {
   const tempBase = tmpdir()
   const tempRoot = await mkdtemp(join(tempBase, 'dsh-skill-host-test-'))
   const displacement = relative(tempBase, tempRoot)
@@ -110,6 +111,7 @@ async function fixture(t, events = [invocation(0, 'review')]) {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
     await rm(tempRoot, { recursive: true, force: true })
   })
+  if (cached) await writeFile(join(tempRoot, 'agg.json'), JSON.stringify({ version: 10, sessions: [cached] }))
   apply(ctx, { dataDir: tempRoot, autoRefreshMs: 30000, backgroundRefreshMs: 60000, flushRefreshMs: 15000, foldConcurrency: 2 })
   const request = async (query = '', options = {}) => {
     const { authenticated = true, headers, ...rest } = options
@@ -267,4 +269,26 @@ test('current catalog descriptions and on-demand definitions share the authentic
   const fallback = await f.request()
   assert.equal(fallback.body.skillUsage.totalCalls, 1)
   assert.deepEqual(fallback.body.catalog, { available: false, entries: [] })
+})
+
+test('cached counts remain readable during a slow initial scan and Skill lookup uses the observed workspace', { timeout: 3000 }, async t => {
+  const cached = createSessionStats({ id: 's1', createdAt: Date.now(), cwd: 'C:/example/project' })
+  foldEvents(cached, [invocation(0, 'review')])
+  const f = await fixture(t, [invocation(0, 'review')], cached)
+  let release
+  const pendingRead = new Promise(resolve => { release = resolve })
+  f.source.beforeRead = async () => pendingRead
+  const observed = []
+  f.ctx.skills.list = async options => { observed.push(options.cwd); return options.cwd === cached.cwd ? [{ name: 'review', description: 'Project review' }] : [] }
+  f.ctx.skills.get = async (name, options) => options.cwd === cached.cwd ? { name, description: 'Project review', content: '# Project review' } : undefined
+  try {
+    const { body } = await f.request()
+    assert.equal(body.skillUsage.totalCalls, 1)
+    assert.equal(body.scan.pending, true)
+    assert.deepEqual(body.catalog.entries, [{ name: 'review', description: 'Project review' }])
+    assert.ok(observed.includes(cached.cwd))
+    const response = await fetch(f.baseUrl + API.skill + '?name=review', { headers: { Cookie: 'test-auth=accepted' } })
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).title, 'Project review')
+  } finally { release() }
 })

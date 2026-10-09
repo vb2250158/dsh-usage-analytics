@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1 (2026-10-09)
+
+- 按历史会话工作区查询技能目录与定义；历史扫描期间先展示缓存统计。
+- Resolve Skills in their observed workspaces and show cached counts during a history scan.
+
 ## 1.3.0 (2026-10-09)
 
 - 顶部汇总改为紧凑摘要，Skill 名称下显示说明；搜索支持说明，点击名称查看当前定义，支持键盘关闭、加载错误和技能移除提示。

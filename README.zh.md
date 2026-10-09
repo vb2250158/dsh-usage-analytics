@@ -18,7 +18,7 @@ dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-
 
 ## 使用
 
-顶部使用紧凑摘要，让排行榜紧跟时间筛选。Skill 名称可点击，也可用键盘操作；名称下方显示当前目录中的说明。搜索匹配名称与说明，不改变汇总数字。点击后可查看当前标题、说明和 Markdown 正文；按 Escape 关闭详情，保留列表。当前全局技能目录中不存在的历史 Skill 保留次数并显示不可用提示。正文通过 DSH 技能服务按需读取，不写入统计缓存。
+顶部使用紧凑摘要，让排行榜紧跟时间筛选。Skill 名称可点击，也可用键盘操作；名称下方显示当前目录中的说明。搜索匹配名称与说明，不改变汇总数字。点击后可查看当前标题、说明和 Markdown 正文；按 Escape 关闭详情，保留列表。历史会话工作区的当前技能目录中不存在的历史 Skill 保留次数并显示不可用提示。正文通过 DSH 技能服务按需读取，不写入统计缓存。
 
 默认选择「总次数」（`all`），另提供「最近七天」（`7`）与「最近一个月」（`30`）。后两项从当前时间向前计算连续 7 天、30 天，不按自然周或自然月计算。次数、排行榜、使用会话数和最近使用时间均跟随所选区间。
 
@@ -60,7 +60,7 @@ dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-
 
 ## 数据与 API
 
-观察器通过 `sessionPersistence.list()`、`open(id, 'read')` 和 `handle.read(offset)` 读取会话，并关闭每个只读 handle。它不追加会话事件，不注册模型可见工具。缓存保存调用名称、时间、序号、来源分类、调用 ID 和结果状态，不保存提示词、Skill 正文、原始工具参数或结果内容。统计响应的 `catalog: { available, entries }` 提供当前全局技能目录的名称与说明。`GET /api/dsh-usage-analytics/skill?name=<skill-name>` 通过 `skills.get()` 读取当前定义，返回 `name`、`title`、`description`、`content`，使用相同鉴权与来源检查。技能缺失返回 404，提供者不可用返回 503，非 GET 请求返回 405。
+观察器通过 `sessionPersistence.list()`、`open(id, 'read')` 和 `handle.read(offset)` 读取会话，并关闭每个只读 handle。它不追加会话事件，不注册模型可见工具。缓存保存调用名称、时间、序号、来源分类、调用 ID 和结果状态，不保存提示词、Skill 正文、原始工具参数或结果内容。统计响应的 `catalog: { available, entries }` 提供历史会话工作区的当前技能目录的名称与说明。`GET /api/dsh-usage-analytics/skill?name=<skill-name>` 通过 `skills.get()` 读取当前定义，返回 `name`、`title`、`description`、`content`，使用相同鉴权与来源检查。技能缺失返回 404，提供者不可用返回 503，非 GET 请求返回 405。
 
 `GET /api/dsh-usage-analytics/stats?period=all` 使用 Host connection 的身份认证与来源检查。追加 `force=1` 可在返回前重建。响应包含 `generatedAt`、`period`、`from`、`skillUsage`、`catalog`、`refreshIntervalMs` 和 `scan`。`from` 是包含该时刻的毫秒时间戳；统计全部保留历史时为 `null`。API 也支持 `today`、`24h` 和 `90`；默认界面提供 `all`、`7`、`30`。
 

@@ -72,7 +72,7 @@ export interface SkillStatisticsResponse {
   period: SkillUsagePeriod
   from: number | null
   skillUsage: SkillUsage
-  /** Current global Skill catalog; historical counts do not depend on its availability. */
+  /** Current Skill catalog from observed workspaces; historical counts do not depend on its availability. */
   catalog: { available: boolean; entries: Array<{ name: string; description: string }> }
   refreshIntervalMs: number
   scan: Partial<ScanResult> & { pending: boolean; pollAfterMs: number }
