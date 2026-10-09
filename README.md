@@ -18,7 +18,7 @@ Ensure `dsh-usage-analytics` is selected in the profile's `dsh.profile.bundles` 
 
 ## Use
 
-The compact summary keeps the ranking near the period selector. Each Skill name is a keyboard-accessible button; its current catalog description appears underneath. Search matches names and descriptions without changing totals. Click a name to read its current title, description and Markdown instructions in a dialog; Escape closes the detail dialog and retains the ranking. Historical Skills absent from the catalog of observed workspaces keep their counts and show an unavailable state. Definitions are read only on demand through DSH's Skill service and are never stored in the statistics cache.
+The compact summary keeps the ranking near the period selector. Explicit catalog titles appear above identifiers; Skill names are keyboard-accessible buttons with current descriptions beneath. Search matches names and descriptions without changing totals. Click a name to read its current title, description and Markdown instructions in a dialog; Escape closes the detail dialog and retains the ranking. Historical Skills absent from the catalog of observed workspaces keep their counts and show an unavailable state. Definitions are read only on demand through DSH's Skill service and are never stored in the statistics cache.
 
 The default period is **Total count** (`all`). **Last seven days** (`7`) and **Last month** (`30`) use rolling intervals of seven and thirty days measured from the current timestamp, rather than calendar weeks or months. Counts, rows, session totals, and the most recent use all follow the selected period.
 

@@ -156,7 +156,7 @@ test('registers locale-aware sidebar and overlay entries and releases effects', 
 
 test('shows catalog descriptions, searches descriptions and opens the current Skill in a keyboard-dismissable dialog', async () => {
   const data = payload()
-  data.catalog = { available: true, entries: [{ name: 'alpha', description: '检查变更与配置' }] }
+  data.catalog = { available: true, entries: [{ name: 'alpha', description: '[XinghaiBuilder] 配置检查: 检查变更与配置' }] }
   const requests = []
   const mounted = await mount(url => {
     requests.push(url)
@@ -165,7 +165,8 @@ test('shows catalog descriptions, searches descriptions and opens the current Sk
   try {
     await mounted.open()
     await flush()
-    assert.equal(document.querySelector('[aria-label="查看 alpha"]').textContent, 'alpha')
+    assert.equal(document.querySelector('[aria-label="查看 配置检查"]').textContent, '配置检查')
+    assert.equal(document.querySelector('.dshua-name .dshua-detailId').textContent, 'alpha')
     assert.match(document.querySelector('.dshua-table').textContent, /检查变更与配置/)
     const input = document.querySelector('input[type="search"]')
     await act(async () => {
@@ -173,8 +174,8 @@ test('shows catalog descriptions, searches descriptions and opens the current Sk
       input.dispatchEvent(new dom.window.Event('input', { bubbles: true }))
     })
     assert.equal(document.querySelectorAll('.dshua-table tbody tr').length, 1)
-    assert.equal(document.querySelector('.dshua-statValue').textContent, '7')
-    await clickText('alpha')
+    assert.equal(document.querySelector('.dshua-metricValue').textContent, '7')
+    await clickText('配置检查')
     await flush()
     assert.equal(requests.at(-1), '/api/dsh-usage-analytics/skill?name=alpha')
     assert.equal(document.querySelector('.dshua-detail h2').textContent, '配置检查')
@@ -194,7 +195,7 @@ test('removed Skills keep historical counts and show a readable missing-definiti
     await clickText('alpha')
     await flush()
     assert.match(document.querySelector('.dshua-detail').textContent, /已移除/)
-    assert.equal(document.querySelector('.dshua-statValue').textContent, '7')
+    assert.equal(document.querySelector('.dshua-metricValue').textContent, '7')
   } finally { await mounted.dispose() }
 })
 
@@ -205,7 +206,7 @@ test('ranks real Host counts, searches without changing totals, and exposes only
     await mounted.open()
     await flush()
     assert.deepEqual(rowNames(), ['beta', 'alpha'])
-    assert.deepEqual([...document.querySelectorAll('.dshua-statValue')].map(item => item.textContent), ['7', '2', '2'])
+    assert.deepEqual([...document.querySelectorAll('.dshua-metricValue')].map(item => item.textContent), ['7', '2', '2'])
     assert.deepEqual([...document.querySelectorAll('[role="tab"]')].map(item => item.textContent), ['总次数', '最近七天', '最近一个月'])
     assert.equal(requests[0], '/api/dsh-usage-analytics/stats?period=all')
     assert.match(document.querySelector('.dshua-calls').textContent, /5失败 1待结果 1/)
@@ -215,7 +216,7 @@ test('ranks real Host counts, searches without changing totals, and exposes only
       input.dispatchEvent(new dom.window.Event('input', { bubbles: true }))
     })
     assert.deepEqual(rowNames(), ['alpha'])
-    assert.equal(document.querySelector('.dshua-statValue').textContent, '7')
+    assert.equal(document.querySelector('.dshua-metricValue').textContent, '7')
     await clickText('清除搜索')
     assert.deepEqual(rowNames(), ['beta', 'alpha'])
     await clickText('最近七天')
@@ -234,13 +235,13 @@ test('shows initial loading and read failure, then retries to a real zero result
   try {
     await mounted.open()
     assert.match(document.querySelector('[role="dialog"]').textContent, /正在读取 Skill 使用记录/)
-    assert.equal(document.querySelector('.dshua-statValue'), null)
+    assert.equal(document.querySelector('.dshua-metricValue'), null)
     await act(async () => rejectRequest(new Error('Unavailable')))
     assert.match(document.querySelector('[role="dialog"]').textContent, /未能读取统计/)
     globalThis.fetch = () => respond(payload([]))
     await clickText('重试')
     await flush()
-    assert.deepEqual([...document.querySelectorAll('.dshua-statValue')].map(item => item.textContent), ['0', '0', '0'])
+    assert.deepEqual([...document.querySelectorAll('.dshua-metricValue')].map(item => item.textContent), ['0', '0', '0'])
     assert.match(document.querySelector('[role="dialog"]').textContent, /这个时间范围内没有 Skill 使用记录/)
     assert.equal(document.querySelector('table'), null)
   } finally { await mounted.dispose() }
@@ -266,7 +267,7 @@ test('refuses missing statistics, retains rows on refresh failure, and recovers 
     globalThis.fetch = () => respond({ generatedAt: 1, refreshIntervalMs: 30000 })
     await clickText('最近七天')
     await flush()
-    assert.equal(document.querySelector('.dshua-statValue'), null)
+    assert.equal(document.querySelector('.dshua-metricValue'), null)
     assert.match(document.querySelector('[role="dialog"]').textContent, /未能读取统计/)
   } finally { await mounted.dispose() }
 })
@@ -316,19 +317,19 @@ test('does not present incomplete or pending scans as an observed zero', async (
     await mounted.open()
     await flush()
     assert.match(document.querySelector('[role="alert"]').textContent, /统计不完整/)
-    assert.equal(document.querySelector('.dshua-statValue'), null)
+    assert.equal(document.querySelector('.dshua-metricValue'), null)
     assert.doesNotMatch(document.querySelector('[role="dialog"]').textContent, /这个时间范围内没有 Skill 使用记录/)
     assert.match(document.querySelector('[role="dialog"]').textContent, /包含失败/)
     scan = { pending: true, stale: false, failed: 0 }
     await clickText('刷新')
     await flush()
     assert.match(document.querySelector('[role="dialog"]').textContent, /正在扫描历史会话/)
-    assert.equal(document.querySelector('.dshua-statValue'), null)
+    assert.equal(document.querySelector('.dshua-metricValue'), null)
     assert.doesNotMatch(document.querySelector('[role="dialog"]').textContent, /这个时间范围内没有 Skill 使用记录/)
     scan = { pending: false, stale: false, failed: 0 }
     await clickText('刷新')
     await flush()
-    assert.equal(document.querySelector('.dshua-statValue').textContent, '0')
+    assert.equal(document.querySelector('.dshua-metricValue').textContent, '0')
     assert.match(document.querySelector('[role="dialog"]').textContent, /这个时间范围内没有 Skill 使用记录/)
   } finally { await mounted.dispose() }
 })
@@ -345,7 +346,7 @@ test('ignores obsolete responses after period changes and records unknown timest
     await act(async () => settleAll({ ok: true, json: async () => payload() }))
     await flush()
     assert.deepEqual(rowNames(), ['未知 Skill'])
-    assert.equal(document.querySelector('.dshua-statValue').textContent, '1')
+    assert.equal(document.querySelector('.dshua-metricValue').textContent, '1')
   } finally { await mounted.dispose() }
 })
 

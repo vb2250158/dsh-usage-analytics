@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2 (2026-10-09)
+
+- 避免父页面样式放大摘要数字与间距；目录提供明确标题时，名称与标识符分行显示。
+- Keep compact metrics independent of parent page styling and show explicit catalog titles above identifiers.
+
 ## 1.3.1 (2026-10-09)
 
 - 按历史会话工作区查询技能目录与定义；历史扫描期间先展示缓存统计。
