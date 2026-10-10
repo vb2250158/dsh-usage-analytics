@@ -583,7 +583,7 @@ test('expanded shared view reuses counts, restores the tab on Escape, and closes
     const requestCount = requests.length
     await clickText('展开统计视图')
     const dialog = document.querySelector('[role="dialog"]')
-    const actual = { title:dialog.getAttribute('aria-label'), rows:rowNames(), metricValues:[...dialog.querySelectorAll('.dshua-metricValue')].map(item=>item.textContent), additionalRequests:requests.length-requestCount }
+    const actual = { title:dialog.getAttribute('aria-label'), initialFocus:document.activeElement.getAttribute('aria-label'), rows:rowNames(), metricValues:[...dialog.querySelectorAll('.dshua-metricValue')].map(item=>item.textContent), additionalRequests:requests.length-requestCount }
     assert.deepEqual(actual, JSON.parse(readFileSync(new URL('./expected/shared-expanded-view.json', import.meta.url),'utf8')))
     await act(async () => dialog.dispatchEvent(new dom.window.KeyboardEvent('keydown', {key:'Escape',bubbles:true})))
     assert.equal(document.querySelector('[role="dialog"]'), null)

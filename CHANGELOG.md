@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.2 (2026-10-10)
+
+- 展开视图初始聚焦顶部控件，避免自动跳到搜索框而隐藏图表。
+- Keep the charts visible when opening the expanded view by focusing its header control.
+
 ## 1.4.1 (2026-10-10)
 
 - 共享标签新增独立展开视图，在窄屏中复用已加载的统计；关闭后保留筛选，标签隐藏时关闭视图并停止请求。

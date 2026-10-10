@@ -1,5 +1,6 @@
 {
   "title": "Skill 使用次数",
+  "initialFocus": "关闭",
   "rows": ["beta", "alpha"],
   "metricValues": ["7", "2", "2", "1"],
   "additionalRequests": 0
