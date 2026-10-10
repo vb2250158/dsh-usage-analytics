@@ -14,6 +14,10 @@ export interface SkillUsageConfig {
   flushRefreshMs: number
   /** Maximum simultaneous read-only scans, an integer from 1 to 32. */
   foldConcurrency: number
+  catalogRefreshMs: number
+  catalogConcurrency: number
+  catalogTimeoutMs: number
+  pageSize: number
 }
 
 /** Omitted fields use the schema defaults; an empty dataDir uses DSH home. */

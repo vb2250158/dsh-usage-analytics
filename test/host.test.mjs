@@ -253,7 +253,7 @@ test('Host disposal unregisters the route and awaits a final readable metadata c
 
 test('current catalog descriptions and on-demand definitions share the authenticated read-only provider', async t => {
   const f = await fixture(t)
-  assert.deepEqual((await f.request()).body.catalog, { available: true, entries: [{ name: 'review', description: 'Review changes' }] })
+  assert.deepEqual((await f.request()).body.catalog, { available: true, pending: false, stale: false, entries: [{ name: 'review', description: 'Review changes', origin: 'current' }] })
   const read = async (query, options = {}) => fetch(f.baseUrl + API.skill + query, { ...options, headers: { Cookie: 'test-auth=accepted', ...options.headers } })
   const response = await read('?name=review')
   assert.equal(response.status, 200)
@@ -266,9 +266,9 @@ test('current catalog descriptions and on-demand definitions share the authentic
   f.ctx.skills.get = async () => { throw new Error('Provider offline') }
   assert.equal((await read('?name=review')).status, 503)
   f.ctx.skills.list = async () => { throw new Error('Provider offline') }
-  const fallback = await f.request()
+  const fallback = await f.request('?force=1')
   assert.equal(fallback.body.skillUsage.totalCalls, 1)
-  assert.deepEqual(fallback.body.catalog, { available: false, entries: [] })
+  assert.deepEqual(fallback.body.catalog, { available: false, pending: false, stale: true, entries: [{ name: 'review', description: 'Review changes', origin: 'current' }] })
 })
 
 test('cached counts remain readable during a slow initial scan and Skill lookup uses the observed workspace', { timeout: 3000 }, async t => {
@@ -285,10 +285,57 @@ test('cached counts remain readable during a slow initial scan and Skill lookup 
     const { body } = await f.request()
     assert.equal(body.skillUsage.totalCalls, 1)
     assert.equal(body.scan.pending, true)
-    assert.deepEqual(body.catalog.entries, [{ name: 'review', description: 'Project review' }])
+    assert.deepEqual(body.catalog.entries, [{ name: 'review', description: 'Project review', origin: 'current' }])
     assert.ok(observed.includes(cached.cwd))
     const response = await fetch(f.baseUrl + API.skill + '?name=review', { headers: { Cookie: 'test-auth=accepted' } })
     assert.equal(response.status, 200)
     assert.equal((await response.json()).title, 'Project review')
   } finally { release() }
+})
+
+test('counts paint independently of slow Skill discovery and subsequent catalogs reuse service results', { timeout: 3000 }, async t => {
+  const f = await fixture(t)
+  await f.request()
+  let release, lists = 0
+  f.ctx.skills.list = async () => { lists++; await new Promise(resolve => { release = resolve }); return [] }
+  const waiting = f.request('?force=1')
+  while (!release) await new Promise(resolve => setTimeout(resolve, 1))
+  try {
+    const counts = await f.request('?catalog=0')
+    assert.equal(counts.response.status, 200)
+    assert.equal(counts.body.skillUsage.totalCalls, 1)
+    assert.equal(counts.body.catalog.pending, true)
+  } finally { release() }
+  await waiting
+  await f.request()
+  assert.equal(lists, 1)
+  const response = await fetch(f.baseUrl + API.catalog, { headers: { Cookie: 'test-auth=accepted' } })
+  assert.equal(response.status, 200)
+  assert.equal(lists, 1)
+  assert.equal((await fetch(f.baseUrl + API.catalog)).status, 401)
+  assert.equal((await fetch(f.baseUrl + API.catalog, { method: 'POST', headers: { Cookie: 'test-auth=accepted' } })).status, 405)
+})
+
+test('retired exact names show structured historical descriptions and a historical detail instead of a guessed current Skill', async t => {
+  const catalog = { seq: 0, time: Date.now(), type: 'user/message', data: { source: { kind: 'skill-catalog', form: 'catalog', entries: [{ name: 'retired', description: 'Historical instructions summary' }] }, content: [{ type: 'text', text: 'PRIVATE_BODY' }] } }
+  const f = await fixture(t, [catalog, invocation(1, 'retired')])
+  const { body } = await f.request()
+  assert.equal(body.skillUsage.totalCalls, 1)
+  assert.deepEqual(body.catalog.entries.find(entry => entry.name === 'retired'), { name: 'retired', description: 'Historical instructions summary', origin: 'history', observedAt: catalog.time })
+  const response = await fetch(f.baseUrl + API.skill + '?name=retired', { headers: { Cookie: 'test-auth=accepted' } })
+  const detail = await response.json()
+  assert.equal(detail.origin, 'history')
+  assert.equal(detail.content, '')
+  assert.equal(detail.description, 'Historical instructions summary')
+  assert.doesNotMatch(JSON.stringify(detail), /PRIVATE_BODY/)
+})
+
+test('longest-unused ranking uses all history while period counts retain exact cutoffs', async t => {
+  const now = Date.now()
+  const f = await fixture(t, [invocation(0, 'oldest', now - 40 * 86400000), invocation(1, 'recent', now - 3600000), invocation(2, 'oldest', now - 20 * 86400000)])
+  const { body } = await f.request('?period=7')
+  assert.equal(body.skillUsage.totalCalls, 1)
+  assert.deepEqual(body.inactiveSkills.map(row => row.name), ['oldest', 'recent'])
+  assert.equal(body.inactiveSkills[0].lastUsedAt, now - 20 * 86400000)
+  assert.ok(body.inactiveSkills[0].inactiveMs >= 20 * 86400000)
 })

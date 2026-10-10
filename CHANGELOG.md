@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0 (2026-10-10)
+
+- 增加使用趋势、来源占比、最常用 Top 10、最久未使用 Top 10，以及可搜索的分页明细；显示未使用时长与上次使用时间。
+- 从 DSH Skill 服务读取当前定义，从结构化会话目录保留历史说明；不新增目录扫描。
+- 次数优先显示，目录独立加载并限制并发、缓存时长和超时；保留旧缓存次数，后台补齐说明。
+- Add usage trends, source shares, frequent and longest-unused rankings, paginated detail rows and explicit historical descriptions. Load counts independently of bounded, cached Skill-service discovery.
+
 ## 1.3.2 (2026-10-09)
 
 - 避免父页面样式放大摘要数字与间距；目录提供明确标题时，名称与标识符分行显示。

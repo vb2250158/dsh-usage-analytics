@@ -104,7 +104,7 @@ function payload(rows = [
 ]) {
   return {
     generatedAt: 1780000002000, refreshIntervalMs: 30000, scan: { pending: false },
-    skillUsage: { totalCalls: rows.reduce((total, row) => total + row.calls, 0), uniqueSkills: rows.length, sessionCount: rows.length ? 2 : 0, modelCalls: 6, userCalls: 1, failedCalls: 1, pendingCalls: 1, unattributedCalls: 0, rows }
+    skillUsage: { totalCalls: rows.reduce((total, row) => total + row.calls, 0), uniqueSkills: rows.length, sessionCount: rows.length ? 2 : 0, modelCalls: rows.reduce((sum, row) => sum + row.modelCalls, 0), userCalls: rows.reduce((sum, row) => sum + row.userCalls, 0), failedCalls: rows.reduce((sum, row) => sum + row.failedCalls, 0), pendingCalls: rows.reduce((sum, row) => sum + row.pendingCalls, 0), unattributedCalls: 0, rows }
   }
 }
 
@@ -138,6 +138,64 @@ async function clickText(text) {
 function rowNames() { return [...document.querySelectorAll('.dshua-table tbody tr td:first-child')].map(cell => cell.textContent) }
 function respond(data) { return Promise.resolve({ ok: true, json: async () => data }) }
 
+test('dashboard snapshot keeps chart counts aligned with table totals and permits keyboard trend inspection', async () => {
+  const data = payload()
+  data.skillUsage.days = { '2026-05-29': { calls: 7, modelCalls: 6, userCalls: 1, failedCalls: 1, pendingCalls: 1, sessionCount: 2 } }
+  const mounted = await mount(() => respond(data))
+  try {
+    await mounted.open()
+    await flush()
+    const actual = {
+      metrics: [...document.querySelectorAll('.dshua-metricValue')].map(item => item.textContent),
+      charts: [...document.querySelectorAll('.dshua-chart h3')].map(item => item.textContent),
+      points: [...document.querySelectorAll('.dshua-trendBar')].map(item => item.getAttribute('aria-label')),
+      ranking: [...document.querySelectorAll('.dshua-rank')].map(item => item.textContent),
+      rows: rowNames(),
+    }
+    assert.deepEqual(actual, JSON.parse(readFileSync(new URL('./expected/skill-dashboard.json', import.meta.url), 'utf8')))
+    await act(async () => document.querySelector('.dshua-trendBar').focus())
+    assert.equal(document.querySelector('.dshua-trendReadout').textContent, '2026-05-29：7 次调用')
+  } finally { await mounted.dispose() }
+})
+
+test('historical descriptions render while current discovery is pending and the ranking mounts one page', async () => {
+  const rows = Array.from({ length: 25 }, (_, index) => ({ name: 'skill-' + String(index).padStart(2, '0'), calls: 1, sessionCount: 1, modelCalls: 1, userCalls: 0, failedCalls: 0, pendingCalls: 0, lastUsedAt: 1780000000000 }))
+  const data = payload(rows)
+  data.catalog = { available: false, entries: [{ name: 'skill-00', description: '历史说明', origin: 'history', observedAt: data.generatedAt }] }
+  let settleCatalog
+  const mounted = await mount(url => url.endsWith('/catalog') ? new Promise(resolve => { settleCatalog = resolve }) : respond(data))
+  try {
+    await mounted.open()
+    await flush()
+    assert.equal(document.querySelectorAll('.dshua-table tbody tr').length, 20)
+    assert.match(document.querySelector('.dshua-table').textContent, /历史说明.*历史目录说明/)
+    assert.match(document.querySelector('.dshua-table').textContent, /正在读取技能说明/)
+    await clickText('下一页')
+    assert.equal(document.querySelectorAll('.dshua-table tbody tr').length, 5)
+    assert.match(document.querySelector('.dshua-pagination').textContent, /21–25 \/ 25/)
+    await act(async () => settleCatalog({ ok: true, json: async () => ({ available: true, pending: false, stale: false, entries: [{ name: 'skill-00', description: '当前说明', origin: 'current' }] }) }))
+    await clickText('上一页')
+    assert.match(document.querySelector('.dshua-table').textContent, /当前说明/)
+    assert.doesNotMatch(document.querySelector('.dshua-table').textContent, /历史说明/)
+  } finally { await mounted.dispose() }
+})
+
+test('longest-unused list shows day/hour durations and retains all-history context under seven-day selection', async () => {
+  const data = payload()
+  data.inactiveSkills = [{ name: 'alpha', lastUsedAt: data.generatedAt - 20 * 86400000 - 3 * 3600000, inactiveMs: 20 * 86400000 + 3 * 3600000 }, { name: 'beta', lastUsedAt: data.generatedAt - 2 * 3600000 - 10 * 60000, inactiveMs: 2 * 3600000 + 10 * 60000 }]
+  const mounted = await mount(() => respond(data))
+  try {
+    await mounted.open()
+    await flush()
+    assert.match(document.querySelector('.dshua-inactiveCard').textContent, /20 天 3 小时未用/)
+    assert.match(document.querySelector('.dshua-inactiveCard').textContent, /2 小时 10 分钟未用/)
+    await clickText('最近七天')
+    await flush()
+    assert.match(document.querySelector('.dshua-inactiveCard').textContent, /全部历史/)
+    assert.equal(document.querySelectorAll('.dshua-inactiveLast').length, 2)
+  } finally { await mounted.dispose() }
+})
+
 
 test('registers locale-aware sidebar and overlay entries and releases effects', () => {
   const bundle = loadBundle()
@@ -160,6 +218,7 @@ test('shows catalog descriptions, searches descriptions and opens the current Sk
   const requests = []
   const mounted = await mount(url => {
     requests.push(url)
+    if (url.endsWith('/catalog')) return respond(data.catalog);
     return respond(url.includes('/skill?') ? { name: 'alpha', title: '配置检查', description: '检查变更与配置', content: '# 配置检查\n\n只读检查。\n\n```js\nconsole.log("example")\n```' } : data)
   })
   try {
@@ -206,9 +265,9 @@ test('ranks real Host counts, searches without changing totals, and exposes only
     await mounted.open()
     await flush()
     assert.deepEqual(rowNames(), ['beta', 'alpha'])
-    assert.deepEqual([...document.querySelectorAll('.dshua-metricValue')].map(item => item.textContent), ['7', '2', '2'])
+    assert.deepEqual([...document.querySelectorAll('.dshua-metricValue')].map(item => item.textContent), ['7', '2', '2', '1'])
     assert.deepEqual([...document.querySelectorAll('[role="tab"]')].map(item => item.textContent), ['总次数', '最近七天', '最近一个月'])
-    assert.equal(requests[0], '/api/dsh-usage-analytics/stats?period=all')
+    assert.equal(requests[0], '/api/dsh-usage-analytics/stats?period=all&catalog=0')
     assert.match(document.querySelector('.dshua-calls').textContent, /5失败 1待结果 1/)
     const input = document.querySelector('input[type="search"]')
     await act(async () => {
@@ -221,10 +280,10 @@ test('ranks real Host counts, searches without changing totals, and exposes only
     assert.deepEqual(rowNames(), ['beta', 'alpha'])
     await clickText('最近七天')
     await flush()
-    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=7')
+    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=7&catalog=0')
     await clickText('最近一个月')
     await flush()
-    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=30')
+    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=30&catalog=0')
     assert.equal(localStorage.getItem('dshua.skillPeriod.v1'), '30')
   } finally { await mounted.dispose() }
 })
@@ -241,7 +300,7 @@ test('shows initial loading and read failure, then retries to a real zero result
     globalThis.fetch = () => respond(payload([]))
     await clickText('重试')
     await flush()
-    assert.deepEqual([...document.querySelectorAll('.dshua-metricValue')].map(item => item.textContent), ['0', '0', '0'])
+    assert.deepEqual([...document.querySelectorAll('.dshua-metricValue')].map(item => item.textContent), ['0', '0', '0', '0'])
     assert.match(document.querySelector('[role="dialog"]').textContent, /这个时间范围内没有 Skill 使用记录/)
     assert.equal(document.querySelector('table'), null)
   } finally { await mounted.dispose() }
@@ -257,7 +316,7 @@ test('refuses missing statistics, retains rows on refresh failure, and recovers 
     fail = true
     await clickText('刷新')
     await flush()
-    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=all&force=1')
+    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=all&catalog=0&force=1')
     assert.deepEqual(rowNames(), ['beta', 'alpha'])
     assert.match(document.querySelector('[role="alert"]').textContent, /上次成功读取/)
     fail = false
@@ -293,12 +352,12 @@ test('uses Host polling delays, forces only explicit refresh, and restores focus
     await act(async () => polling[1].callback())
     await flush()
     assert.equal(calls, 2)
-    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=all')
+    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=all&catalog=0')
     assert.ok([...timers.values()].some(timer => timer.delay === 30000))
     await clickText('刷新')
     await flush()
     assert.equal(calls, 3)
-    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=all&force=1')
+    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=all&catalog=0&force=1')
     await act(async () => document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
     assert.equal(document.querySelector('[role="dialog"]'), null)
     assert.equal(document.activeElement, mounted.trigger)
@@ -336,7 +395,7 @@ test('does not present incomplete or pending scans as an observed zero', async (
 
 test('ignores obsolete responses after period changes and records unknown timestamps honestly', async () => {
   let settleAll
-  const mounted = await mount(url => url.endsWith('all') ? new Promise(resolve => { settleAll = resolve }) : respond(payload([{ name: '(unknown skill)', calls: 1, sessionCount: 1, modelCalls: 1, userCalls: 0, failedCalls: 0, pendingCalls: 0, lastUsedAt: null }])))
+  const mounted = await mount(url => url.includes('period=all') ? new Promise(resolve => { settleAll = resolve }) : respond(payload([{ name: '(unknown skill)', calls: 1, sessionCount: 1, modelCalls: 1, userCalls: 0, failedCalls: 0, pendingCalls: 0, lastUsedAt: null }])))
   try {
     await mounted.open()
     await clickText('最近七天')
@@ -519,7 +578,7 @@ test('shared tab preserves period, search and results while inactive, aborts pol
   let failMonth = false
   const mounted = await runtime((url, options) => {
     requests.push({ url, signal: options.signal })
-    return failMonth && url.endsWith('30') ? Promise.reject(new Error('Unavailable')) : respond(payload())
+    return failMonth && url.includes('period=30') ? Promise.reject(new Error('Unavailable')) : respond(payload())
   })
   const originalSetTimeout = globalThis.setTimeout, originalClearTimeout = globalThis.clearTimeout
   const polling = new Map()
@@ -533,7 +592,7 @@ test('shared tab preserves period, search and results while inactive, aborts pol
     globalThis.clearTimeout = id => { if (polling.has(id)) polling.set(id, true); return originalClearTimeout(id) }
     await mounted.mountAnalytics()
     await flush()
-    assert.equal(requests[0].url, '/api/dsh-usage-analytics/stats?period=all')
+    assert.equal(requests[0].url, '/api/dsh-usage-analytics/stats?period=all&catalog=0')
     await clickText('最近七天')
     await flush()
     const search = document.querySelector('input[type="search"]')
@@ -553,16 +612,17 @@ test('shared tab preserves period, search and results while inactive, aborts pol
     assert.deepEqual(rowNames(), ['alpha'])
     await clickText('Show Skill test tab')
     await flush()
-    assert.equal(requests.at(-1).url, '/api/dsh-usage-analytics/stats?period=7')
+    assert.equal(requests.at(-1).url, '/api/dsh-usage-analytics/stats?period=7&catalog=0')
     assert.equal(document.querySelector('input[type="search"]').value, 'alpha')
     assert.deepEqual(rowNames(), ['alpha'])
     failMonth = true
     await clickText('最近一个月')
     await flush()
     assert.match(document.querySelector('[data-shared-statistics]').textContent, /未能读取统计/)
+    failMonth = false
     await clickText('重试')
     await flush()
-    assert.equal(requests.at(-1).url, '/api/dsh-usage-analytics/stats?period=30&force=1')
+    assert.equal(requests.at(-1).url, '/api/dsh-usage-analytics/stats?period=30&catalog=0&force=1')
     assert.deepEqual(rowNames(), ['alpha'])
     assert.equal(document.querySelector('[role="dialog"]'), null)
   } finally {
@@ -618,7 +678,7 @@ test('real usage-plugin and analytics share localized tabs, preserve selection a
     await flush()
     assert.equal(document.querySelector('input[type="search"]'), input)
     assert.equal(input.value, 'alpha')
-    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=30')
+    assert.equal(requests.at(-1), '/api/dsh-usage-analytics/stats?period=30&catalog=0')
     assert.deepEqual(rowNames(), ['alpha'])
     await mounted.setLanguage('en')
     await flush()

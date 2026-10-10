@@ -18,7 +18,7 @@ Ensure `dsh-usage-analytics` is selected in the profile's `dsh.profile.bundles` 
 
 ## Use
 
-The compact summary keeps the ranking near the period selector. Explicit catalog titles appear above identifiers; Skill names are keyboard-accessible buttons with current descriptions beneath. Search matches names and descriptions without changing totals. Click a name to read its current title, description and Markdown instructions in a dialog; Escape closes the detail dialog and retains the ranking. Historical Skills absent from the catalog of observed workspaces keep their counts and show an unavailable state. Definitions are read only on demand through DSH's Skill service and are never stored in the statistics cache.
+The dashboard shows call, Skill, session and failure totals, a daily usage trend, source shares, the ten most used Skills, and the ten longest-unused Skills. All-time histories longer than 90 days use monthly trend buckets. Hover or focus a trend bar to inspect its count. The longest-unused list always uses all retained history, shows elapsed time and the last-use timestamp, and excludes unknown timestamps. The detail table is paginated; searching names or descriptions leaves charts and totals unchanged. Current descriptions and bodies come from the DSH Skill service. Retired exact names retain descriptions from structured session catalogs and are labeled historical; their detail view never presents a historical description as a current body. Counts load separately from the catalog and remain usable during source failures.
 
 The default period is **Total count** (`all`). **Last seven days** (`7`) and **Last month** (`30`) use rolling intervals of seven and thirty days measured from the current timestamp, rather than calendar weeks or months. Counts, rows, session totals, and the most recent use all follow the selected period.
 
@@ -55,6 +55,10 @@ Set these fields on the `usage-analytics` plugin row in the profile's Cordis con
 | `backgroundRefreshMs` | `60000` | Background session scan interval, at least 1000 ms. |
 | `flushRefreshMs` | `15000` | Delay before an event-triggered scan, at least 0 ms. |
 | `foldConcurrency` | `4` | Simultaneous read-only session scans, an integer from 1 to 32. |
+| `catalogRefreshMs` | `60000` | Current metadata revalidation interval; at least 1000 ms. |
+| `catalogConcurrency` | `4` | Concurrent workspace service lookups; 1–32. |
+| `catalogTimeoutMs` | `3000` | Timeout per workspace Skill service lookup; at least 100 ms. |
+| `pageSize` | `20` | Detail rows per page; 5–100. |
 
 The cache can be rebuilt from retained session logs. A cache version change rebuilds predecessor data automatically. Session revision tokens are compared only within the current persistence service instance.
 
@@ -89,3 +93,5 @@ Apache-2.0. See [LICENSE](./LICENSE) and the [upstream repository](https://githu
 The plugin list shows **Skill usage statistics** in English and **Skill 使用统计** in Chinese, following the DSH interface language. `locale/en.json` and `locale/zh.json` provide the title and description; `icon.svg` supplies self-contained artwork. The package exports and publishes these resources. The icon is adapted from Lucide; see [ICON_LICENSE.txt](ICON_LICENSE.txt).
 
 The icon uses a centered 36 × 36 viewBox to leave more space around the artwork inside the plugin icon frame.
+
+`GET /api/dsh-usage-analytics/stats?period=all&catalog=0` returns counts and retained catalog metadata first. `GET /api/dsh-usage-analytics/catalog` independently revalidates current metadata with bounded concurrency, timeouts and a shared expiring cache. Both routes use the same authentication and origin checks. Statistics additionally return `pageSize` and all-history `inactiveSkills` with `name`, `lastUsedAt` and `inactiveMs`. Catalog entries carry `origin` (`current` or `history`); historical entries include `observedAt`. Catalog `pending` and `stale` describe discovery state. Historical detail responses return `origin: "history"`, the recorded description and empty `content`, without directory scanning or guessed name mapping. Previous-version counts paint immediately while the first read-only scan rebuilds structured descriptions.

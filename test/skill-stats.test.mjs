@@ -4,6 +4,17 @@ import { aggregateSession, buildSkillUsage, createSessionStats, dayKey, foldEven
 
 const at = Date.parse('2026-10-06T12:00:00+08:00')
 
+test('structured catalog descriptions survive retirement without retaining instruction bodies or creating calls', () => {
+  const stats = aggregateSession(header(), [
+    { seq: 0, time: at, type: 'user/message', data: { source: { kind: 'skill-catalog', form: 'catalog', entries: [{ name: 'review', description: 'Inspect changes' }, { name: '../bad', description: 'bad' }] }, content: [{ type: 'text', text: 'PRIVATE_MODEL_PROMPT' }] } },
+    call(1, 'review'),
+    { seq: 2, time: at + 2, type: 'user/message', data: { source: { kind: 'skill-catalog', form: 'catalog', entries: [{ name: 'review', description: 'Inspect new changes' }] } } },
+  ])
+  assert.deepEqual(stats.skillCatalog, { review: { description: 'Inspect new changes', time: at + 2 } })
+  assert.equal(buildSkillUsage({ stats }).totalCalls, 1)
+  assert.doesNotMatch(JSON.stringify(stats), /PRIVATE_MODEL_PROMPT/)
+})
+
 function header(id = 's1') {
   return { id, createdAt: at, isSeeded: false }
 }

@@ -18,7 +18,7 @@ dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-
 
 ## 使用
 
-顶部使用紧凑摘要，让排行榜紧跟时间筛选。目录提供明确标题时，名称与标识符分行显示。点击名称或用键盘打开详情；名称下方显示当前目录中的说明。搜索匹配名称与说明，不改变汇总数字。点击后可查看当前标题、说明和 Markdown 正文；按 Escape 关闭详情，保留列表。历史会话工作区的当前技能目录中不存在的历史 Skill 保留次数并显示不可用提示。正文通过 DSH 技能服务按需读取，不写入统计缓存。
+页面提供调用总数、使用过的 Skill、涉及会话和失败次数，以及使用趋势、调用来源占比、最常用 Top 10、最久未使用 Top 10。趋势按日显示，超过 90 天的全部历史按月合并；可以用鼠标或键盘查看每个时间段的次数。最久未使用排行始终按全部历史的最近使用时间排序，显示未使用时长和上次使用时间；时间未知的记录不参加此排行。明细分页显示，搜索名称或说明时保持图表与汇总数字不变。当前说明和正文经 DSH Skill 服务读取；已退役的名称使用会话结构化目录中记录的说明，并标记“历史目录说明”。历史说明详情不冒充当前正文。统计与目录分别加载，来源故障时仍可查看次数。
 
 默认选择「总次数」（`all`），另提供「最近七天」（`7`）与「最近一个月」（`30`）。后两项从当前时间向前计算连续 7 天、30 天，不按自然周或自然月计算。次数、排行榜、使用会话数和最近使用时间均跟随所选区间。
 
@@ -55,6 +55,10 @@ dsh plugin --profile web add github:vb2250158/dsh-usage-analytics#<40-character-
 | `backgroundRefreshMs` | `60000` | 后台会话扫描间隔，最少 1000 毫秒。 |
 | `flushRefreshMs` | `15000` | 会话事件触发扫描前的等待时间，最少 0 毫秒。 |
 | `foldConcurrency` | `4` | 同时读取会话的数量，1 至 32 的整数。 |
+| `catalogRefreshMs` | `60000` | 当前目录说明重新验证间隔，至少 1000 ms。 |
+| `catalogConcurrency` | `4` | 并行工作区查询数，1–32。 |
+| `catalogTimeoutMs` | `3000` | 每个工作区 Skill 服务查询超时，至少 100 ms。 |
+| `pageSize` | `20` | 每页明细行数，5–100。 |
 
 缓存可从保留的会话日志重建。缓存版本升级会自动重建旧版本数据；会话 revision 仅在当前持久化服务实例内比较。
 
@@ -89,3 +93,5 @@ Apache-2.0，见 [LICENSE](./LICENSE) 与[上游仓库](https://github.com/23276
 插件列表跟随 DSH 界面语言，中文显示“Skill 使用统计”，英文显示“Skill usage statistics”。`locale/en.json` 和 `locale/zh.json` 提供名称与说明，`icon.svg` 提供自包含图标，均随安装包发布并通过资源导出访问。图标改编自 Lucide，授权见 [ICON_LICENSE.txt](ICON_LICENSE.txt)。
 
 图标使用居中的 36 × 36 视区，为绘制内容保留留白，使其在插件图标框中的显示比例更紧凑。
+
+`GET /api/dsh-usage-analytics/stats?period=all&catalog=0` 先返回次数与已保存的目录元数据；`GET /api/dsh-usage-analytics/catalog` 独立读取当前目录，复用有效缓存并限制并发与超时。两个接口使用相同的身份认证与来源检查。统计响应另包含 `pageSize` 和不受区间筛选影响的 `inactiveSkills`（`name`、`lastUsedAt`、`inactiveMs`）。目录条目的 `origin` 标记 `current` 或 `history`，历史条目含 `observedAt`；目录的 `pending`、`stale` 表示读取状态。历史详情返回 `origin: "history"`、目录说明与空 `content`，不扫描 Skill 目录或猜测名称对应。上一版次数缓存可立即显示，首次只读扫描补齐结构化说明。

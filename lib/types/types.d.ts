@@ -72,9 +72,12 @@ export interface SkillStatisticsResponse {
   period: SkillUsagePeriod
   from: number | null
   skillUsage: SkillUsage
+  /** Longest elapsed time since last named Skill use, independent of the selected period. */
+  inactiveSkills: Array<{ name: string; lastUsedAt: number; inactiveMs: number }>
   /** Current Skill catalog from observed workspaces; historical counts do not depend on its availability. */
-  catalog: { available: boolean; entries: Array<{ name: string; description: string }> }
+  catalog: { available: boolean; pending: boolean; stale: boolean; entries: Array<{ name: string; description: string; origin: 'current' | 'history'; observedAt?: number }> }
   refreshIntervalMs: number
+  pageSize: number
   scan: Partial<ScanResult> & { pending: boolean; pollAfterMs: number }
 }
 
@@ -117,6 +120,8 @@ export interface SessionStats {
   tools: Record<string, number>
   skills: Record<string, number>
   skillInvocations: SkillInvocation[]
+  /** Latest structured descriptions; instruction bodies are never cached. */
+  skillCatalog: Record<string, { description: string; time: number }>
   plugins: Record<string, number>
   subagentToolCalls: number
   models: Record<string, ModelBucket>
