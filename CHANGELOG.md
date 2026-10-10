@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.1 (2026-10-10)
+
+- 共享标签新增独立展开视图，在窄屏中复用已加载的统计；关闭后保留筛选，标签隐藏时关闭视图并停止请求。
+- Add an expanded statistics view using the existing request model, with Escape handling and shared-tab lifecycle support.
+
 ## 1.4.0 (2026-10-10)
 
 - 增加使用趋势、来源占比、最常用 Top 10、最久未使用 Top 10，以及可搜索的分页明细；显示未使用时长与上次使用时间。

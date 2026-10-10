@@ -573,6 +573,30 @@ test('combines through the real Registry in either load order and restores stand
   }
 })
 
+test('expanded shared view reuses counts, restores the tab on Escape, and closes when hidden', async () => {
+  const requests = []
+  const mounted = await runtime((url, options) => { requests.push({url,signal:options.signal}); return respond(payload()) })
+  try {
+    await mounted.mountOwner()
+    await mounted.mountAnalytics()
+    await flush()
+    const requestCount = requests.length
+    await clickText('展开统计视图')
+    const dialog = document.querySelector('[role="dialog"]')
+    const actual = { title:dialog.getAttribute('aria-label'), rows:rowNames(), metricValues:[...dialog.querySelectorAll('.dshua-metricValue')].map(item=>item.textContent), additionalRequests:requests.length-requestCount }
+    assert.deepEqual(actual, JSON.parse(readFileSync(new URL('./expected/shared-expanded-view.json', import.meta.url),'utf8')))
+    await act(async () => dialog.dispatchEvent(new dom.window.KeyboardEvent('keydown', {key:'Escape',bubbles:true})))
+    assert.equal(document.querySelector('[role="dialog"]'), null)
+    assert.deepEqual(rowNames(), ['beta','alpha'])
+    await clickText('展开统计视图')
+    await clickText('Hide Skill test tab')
+    assert.equal(document.querySelector('[role="dialog"]'), null)
+    assert.equal(requests.at(-1).signal.aborted, true)
+    await clickText('Show Skill test tab')
+    assert.equal(document.querySelector('[role="dialog"]'), null)
+  } finally { await mounted.dispose() }
+})
+
 test('shared tab preserves period, search and results while inactive, aborts polling, and retries through the same API', async () => {
   const requests = []
   let failMonth = false

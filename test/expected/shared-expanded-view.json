@@ -1,0 +1,6 @@
+{
+  "title": "Skill 使用次数",
+  "rows": ["beta", "alpha"],
+  "metricValues": ["7", "2", "2", "1"],
+  "additionalRequests": 0
+}
